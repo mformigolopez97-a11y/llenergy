@@ -72,7 +72,8 @@ function cargar(){
       S = { ...S, ...g, ajustes:{ ...AJUSTES, ...(g.ajustes||{}) } };
       S.trabajos = (g.trabajos||[]).map(t => ({
         ...t, sistema:{...SISTEMA, ...(t.sistema||{})},
-        dinero:{...DINERO, ...(t.dinero||{})}, visita:{...VISITA, ...(t.visita||{})} }));
+        dinero:{...DINERO, ...(t.dinero||{})}, visita:{...VISITA, ...(t.visita||{})},
+        cobros: t.cobros || [] }));
     }
   } catch(e){ /* si el guardado está corrupto, se empieza limpio */ }
   if (!S.trabajos.length) nuevoTrabajo('Ejemplo · casa de El Cobre', 'El Cobre, Santiago', true);
@@ -87,7 +88,7 @@ function nuevoTrabajo(nombre, zona, ejemplo){
     estado:'visita', ejemplo: !!ejemplo,
     sistema:{...SISTEMA},
     dinero: ejemplo ? {...DINERO_EJEMPLO} : {...DINERO},
-    visita:{...VISITA} };
+    visita:{...VISITA}, cobros:[] };
   S.trabajos.unshift(t); S.activo = t.id; return t;
 }
 const activo = () => S.trabajos.find(t => t.id === S.activo) || S.trabajos[0];
@@ -127,6 +128,15 @@ function sistemaDe(t){
 }
 
 /* ═══════════════ PANTALLA · TRABAJOS ═══════════════ */
+/* el estado del cobro, de un vistazo, solo en modo Oficina */
+function pagoChip(t){
+  if (!(t.cobros || []).length && !num(t.dinero.precio)) return '';
+  const r = M.resumenCobros(t.cobros, num(t.dinero.precio), 0);
+  const C = { 'sin cobrar':['visita','Sin cobrar'], parcial:['aceptado', Math.round(r.pct) + ' %'], pagado:['montado','Pagado'] };
+  const [cl, tx] = C[r.estado];
+  return '<span class="estado ' + cl + '" style="margin-left:5px">' + tx + '</span>';
+}
+
 function pintarTrabajos(){
   const ETIQ = { visita:'Visita', cotizado:'Cotizado', aceptado:'Aceptado', montado:'Montado' };
   let h = S.trabajos.map(t => {
@@ -137,7 +147,8 @@ function pintarTrabajos(){
       + '<span class="zn">' + (t.zona ? esc(t.zona) + ' · ' : '')
       + e.P/1000 + ' kW · ' + e.kWh.toFixed(1).replace('.',',') + ' kWh · '
       + e.npan + ' panel' + (e.npan===1?'':'es') + '</span></span>'
-      + '<span class="estado ' + t.estado + '">' + ETIQ[t.estado] + '</span></button>';
+      + '<span class="estado ' + t.estado + '">' + ETIQ[t.estado] + '</span>'
+      + (S.rol === 'oficina' ? pagoChip(t) : '') + '</button>';
   }).join('');
   h += '<button type="button" class="btn" id="btnNuevo">+ Trabajo nuevo</button>';
 
@@ -438,6 +449,60 @@ function pintarDinero(){
     + fila('Fondo de garantía', din(n.fondo), 'El ' + n.fondoPct + ' % de la venta. Tu proveedor no cubre nada después del montaje, así que esto es la garantía entera')
     + fila('Para ti', din(n.paraMi), (100 - num(a.socioPct)) + ' % de la ganancia', 'ok')
     + fila('Para la socia', din(n.paraSocia), num(a.socioPct) + ' % de la ganancia. Si el mes no hay ventas, no cobra'));
+
+  /* --- cobros --- */
+  const gastoCup = num(m.estr) + num(m.obra);
+  const rc = M.resumenCobros(t.cobros, num(m.precio), gastoCup);
+  const tasa = num(a.usdCup);
+  const fech = ts => { const d = new Date(ts); const p = n => String(n).padStart(2,'0');
+    return p(d.getDate()) + '/' + p(d.getMonth()+1) + '/' + String(d.getFullYear()).slice(2); };
+  const EST = { 'sin cobrar':['bad','Sin cobrar'], parcial:['warn','Cobrado a medias'], pagado:['ok','Pagado'] };
+  const [clEst, txEst] = EST[rc.estado];
+
+  let hc = '<div class="titular ' + (rc.estado === 'pagado' ? '' : rc.estado === 'parcial' ? 'info' : 'rojo') + '">'
+    + '<b>' + txEst + '</b><small>'
+    + (rc.estado === 'pagado'
+        ? 'Han entrado ' + din(rc.cobrado) + ' de los ' + din(num(m.precio)) + ' del sistema.'
+        : 'Han entrado <b>' + din(rc.cobrado) + '</b> de ' + din(num(m.precio))
+          + '. Faltan <b>' + din(rc.falta) + '</b>.')
+    + '</small></div>';
+
+  hc += fila('Plan de cobro · en pesos', tasa > 0 ? miles(rc.planCup * tasa) + ' CUP' : din(rc.planCup),
+    'Es lo que vas a gastar en pesos: estructura y mano de obra. <b>Cobra en CUP justo eso</b>, '
+    + 'porque el peso que sobre no sale del país'
+    + (tasa > 0 ? ' · equivale a ' + din(rc.planCup) : ' · pon el cambio abajo para verlo en pesos'), 'info');
+  hc += fila('Plan de cobro · en dólares', din(rc.planUsd),
+    'El resto: es con lo que se pagan los equipos', 'info');
+
+  if (rc.sinCambio)
+    hc += fila('<span class="pt bad"></span>Cobros en pesos sin cambio apuntado', rc.sinCambio,
+      'Sin el cambio del día no se puede saber cuántos dólares entraron. Corrígelos abajo.', 'bad');
+
+  if (rc.n){
+    hc += '<div class="sep">Lo que ha entrado</div>';
+    (t.cobros || []).forEach((c, i) => {
+      const cup = c.moneda === 'CUP';
+      const eq = cup && +c.cambio > 0 ? ' · ' + din((+c.importe) / (+c.cambio)) : (cup ? ' · <b>falta el cambio</b>' : '');
+      hc += fila(esc(c.quien || 'Sin apuntar') + ' <span style="opacity:.55">· ' + fech(c.cuando) + '</span>',
+        (cup ? miles(c.importe) + ' CUP' : din(c.importe)),
+        (cup ? 'Al cambio de ' + (+c.cambio || '—') + ' CUP/USD' + eq : 'En dólares')
+        + ' <button type="button" class="mini" data-quita="' + i + '">Quitar</button>',
+        cup && !+c.cambio ? 'bad' : '');
+    });
+  }
+
+  hc += '<div class="sep">Apuntar un cobro</div>'
+    + campo('c_importe','Cuánto entró','', numInp('c_importe', '', 0, 9999999, 1))
+    + campo('c_moneda','En qué moneda','', sel('c_moneda', 'USD', [['USD','Dólares'],['CUP','Pesos cubanos']]))
+    + campo('c_cambio','Cambio de ese día','Solo si fue en pesos. CUP por 1 USD',
+        numInp('c_cambio', tasa || '', 0, 5000, 1))
+    + campo('c_quien','Quién lo cobró','', sel('c_quien', 'Instalador',
+        [['Instalador','El instalador'],['Marcos','Yo'],['Otro','Otra persona']]))
+    + '<button type="button" class="btn" id="btnCobro" style="margin-top:12px">Apuntar este cobro</button>';
+
+  h += caja('Cobros', hc,
+    'Cada cobro guarda su propio cambio, así que el total en dólares sale bien aunque el peso se mueva. '
+    + '<b>A ti el cambio no te quita nada:</b> tú cotizas en dólares y el cliente entrega los pesos que equivalgan.');
 
   /* --- el cambio del día --- */
   const r = num(a.usdCup);
@@ -798,6 +863,27 @@ document.addEventListener('click', ev => {
   const ir = ev.target.closest('[data-ir]');
   if (ir){ S.activo = ir.dataset.ir; pintar(); return; }
   if (ev.target.id === 'btnNuevo'){ nuevoTrabajo(); pintar(); window.scrollTo(0,0); return; }
+  if (ev.target.id === 'btnCobro'){
+    const t = activo();
+    const imp = num($('c_importe').value);
+    if (imp <= 0){ alert('Pon cuánto entró.'); return; }
+    const moneda = $('c_moneda').value;
+    const cambio = moneda === 'CUP' ? num($('c_cambio').value) : 0;
+    if (moneda === 'CUP' && cambio <= 0){
+      alert('Si el cobro fue en pesos hace falta el cambio de ese día, si no no se sabe cuántos dólares entraron.');
+      return;
+    }
+    t.cobros = t.cobros || [];
+    t.cobros.push({ importe: imp, moneda, cambio, quien: $('c_quien').value, cuando: Date.now() });
+    guardar(); pintar();
+    return;
+  }
+  const quita = ev.target.closest('[data-quita]');
+  if (quita){
+    const t = activo(), i = +quita.dataset.quita;
+    if (confirm('¿Quitar ese cobro?')){ t.cobros.splice(i, 1); guardar(); pintar(); }
+    return;
+  }
   if (ev.target.id === 'btnCot'){ abrirCot(activo(), S.ajustes); return; }
   if (ev.target.id === 'btnEnviar'){ enviarTrabajo(); return; }
   if (ev.target.id === 'btnBorrar'){

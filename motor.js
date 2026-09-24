@@ -391,3 +391,37 @@ export function negocio(c){
     paraMi: ganancia * (100 - c.socioPct) / 100,
     paraSocia: ganancia * c.socioPct / 100 };
 }
+
+/* ═══════════════ 10 · COBROS ═══════════════
+   Al cliente se le cotiza siempre en dólares. Puede pagar en dólares o en
+   pesos al cambio del día, así que cada cobro guarda su propio cambio y de
+   ahí sale cuánto entró de verdad en dólares.
+
+   La regla de la casa: en pesos se cobra exactamente lo que hay que gastar
+   en pesos (estructura y mano de obra), porque el peso sobrante no sale
+   del país. */
+export function resumenCobros(cobros, precio, gastoEnCup){
+  const L = cobros || [];
+  let usd = 0, cup = 0, sinCambio = 0;
+
+  L.forEach(c => {
+    const imp = +c.importe || 0;
+    if (c.moneda === 'CUP'){
+      cup += imp;
+      const r = +c.cambio || 0;
+      if (r > 0) usd += imp / r; else sinCambio++;
+    } else {
+      usd += imp;
+    }
+  });
+
+  const cobrado = Math.round(usd);
+  const falta = Math.max(0, Math.round((+precio || 0) - cobrado));
+  const pct = precio > 0 ? Math.min(100, cobrado / precio * 100) : 0;
+
+  return { n: L.length, cobrado, cup, falta, pct, sinCambio,
+    estado: !L.length ? 'sin cobrar' : (falta <= 0 ? 'pagado' : 'parcial'),
+    // cuánto conviene cobrar en cada moneda
+    planCup: Math.round(+gastoEnCup || 0),
+    planUsd: Math.round(Math.max(0, (+precio || 0) - (+gastoEnCup || 0))) };
+}
