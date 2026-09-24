@@ -24,10 +24,13 @@ const SISTEMA = { pinv:6, vac:230, vbat:51.2, ah:100, abms:100, nbat:1, icar:100
 
 // Un trabajo nuevo empieza en cero: los precios los pone Marcos, no vienen
 // escritos en el programa. Así no hay ninguna cifra suya en el código.
-const DINERO = { kit:0, ppan:0, prot:0, cab:0, estr:0, obra:0, trans:0, precio:0 };
+const DINERO = { kit:0, ppan:0, prot:0, cab:0, estr:0, obra:0, trans:0, precio:0,
+  cobroMontaje:0 };   // lo que el cliente paga por el montaje; es lo único de dinero
+                      // que viaja al instalador
 
 // Solo el trabajo de ejemplo lleva cifras, y son redondas y de muestra.
-const DINERO_EJEMPLO = { kit:2500, ppan:180, prot:600, cab:180, estr:200, obra:300, trans:80, precio:5800 };
+const DINERO_EJEMPLO = { kit:2500, ppan:180, prot:600, cab:180, estr:200, obra:300, trans:80,
+  precio:5800, cobroMontaje:650 };
 
 const VISITA = { consumo:'', tipoTecho:'plano', orientacion:'sur', sombras:'no',
   neutro:'sin revisar', equiposCasa:'', pide:'', puede:'', extra:'', notas:'' };
@@ -137,15 +140,24 @@ function pintarTrabajos(){
   h += '<button type="button" class="btn" id="btnNuevo">+ Trabajo nuevo</button>';
 
   const t = activo();
+  if (t.recibido)
+    h += caja('Trabajo recibido',
+      '<div class="titular info"><b>Este trabajo te lo mandaron</b>'
+      + '<small>Trae el diseño, las protecciones y los materiales ya calculados. '
+      + 'Si algo no cuadra con lo que ves en la casa, <b>para y pregunta antes de conectar nada</b>.</small></div>');
   h += caja('Datos del trabajo abierto',
     campo('t_nombre','Nombre del cliente','',txtInp('t_nombre', t.nombre, 'Nombre y apellido'), true)
     + campo('t_zona','Zona','',txtInp('t_zona', t.zona, 'El Cobre, Santiago'), true)
     + campo('t_contacto','Teléfono o WhatsApp','',txtInp('t_contacto', t.contacto, '+53 5 ...'), true)
     + campo('t_estado','En qué va','',sel('t_estado', t.estado,
         [['visita','Visita hecha'],['cotizado','Cotizado'],['aceptado','Aceptado'],['montado','Montado']]))
+    + '<button type="button" class="btn" id="btnEnviar" style="margin-top:14px">Enviar al instalador</button>'
     + (S.trabajos.length > 1
-        ? '<button type="button" class="btn peligro" id="btnBorrar" style="margin-top:12px">Borrar este trabajo</button>'
-        : ''));
+        ? '<button type="button" class="btn peligro" id="btnBorrar" style="margin-top:9px">Borrar este trabajo</button>'
+        : ''),
+    'El enlace lleva el diseño, las protecciones, los materiales y <b>lo que se cobra por el montaje</b>. '
+    + '<b>No lleva ni tus costes, ni tu margen, ni el reparto.</b> Se lo mandas por WhatsApp y al abrirlo '
+    + 'se le guarda en su teléfono, listo para usar sin internet.');
 
   $('p-trabajos').innerHTML = h;
 }
@@ -353,6 +365,14 @@ function pintarDiseno(){
     + mat,
     '<b>Los paneles ya vienen con su cable y su MC4 de fábrica:</b> para conectarlos en serie no hace falta nada, se enchufa uno con el siguiente. Las presillas aprietan solo donde el fabricante marca el marco, nunca sobre el cristal.');
 
+  /* --- lo que se cobra por el montaje: lo ve también el instalador --- */
+  const cobro = num(t.dinero.cobroMontaje);
+  if (cobro > 0)
+    h += caja('Lo que se cobra por este montaje',
+      '<div class="titular"><b>' + din(cobro) + '</b>'
+      + '<small>Es lo acordado con el cliente <b>solo por el montaje</b>. '
+      + 'Si el cliente pregunta por otra cosa, que hable con la oficina.</small></div>');
+
   /* --- comprobaciones --- */
   h += caja('Comprobaciones del diseño',
     M.comprobaciones(d).map(k => fila(
@@ -407,6 +427,9 @@ function pintarDinero(){
 
   h += caja('Lo que le cobras',
     campo('m_precio','Precio al cliente','Siempre cotizado en dólares', numInp('m_precio', m.precio, 0, 30000, 10))
+    + campo('m_cobroMontaje','De eso, cuánto es el montaje',
+        'Lo único de dinero que ve el instalador cuando le mandas el trabajo',
+        numInp('m_cobroMontaje', m.cobroMontaje, 0, 5000, 10))
     + fila('Fondo de garantía', din(n.fondo), 'El ' + n.fondoPct + ' % de la venta. Tu proveedor no cubre nada después del montaje, así que esto es la garantía entera')
     + fila('Para ti', din(n.paraMi), (100 - num(a.socioPct)) + ' % de la ganancia', 'ok')
     + fila('Para la socia', din(n.paraSocia), num(a.socioPct) + ' % de la ganancia. Si el mes no hay ventas, no cobra'));
@@ -451,7 +474,7 @@ function pintarAjustes(){
       + fila('Funciona sin internet', 'Sí', 'Una vez abierta, se queda guardada en el teléfono', 'ok')
       + fila('Actualizaciones', 'Solas', 'Cuando hay una versión nueva se instala sola', 'ok'))
       + caja('Qué hacer si algo no cuadra',
-        '<div class="titular azul"><b>Nunca improvises en el techo</b>'
+        '<div class="titular info"><b>Nunca improvises en el techo</b>'
         + '<small>Si un número no te cuadra o el equipo no es el que dice la ficha, '
         + 'para y pregunta antes de conectar nada. Un inversor mal cableado no tiene arreglo.</small></div>');
     return;
@@ -538,6 +561,67 @@ function pintar(){
   else if (pantalla === 'diseno') pintarDiseno();
   else if (pantalla === 'dinero') pintarDinero();
   else pintarAjustes();
+  guardar();
+}
+
+/* ═══════════════ MANDARLE EL TRABAJO AL INSTALADOR ═══════════════
+   El trabajo viaja dentro del propio enlace, no hay servidor por medio.
+   Solo va la parte técnica y el precio del montaje: ni costes, ni margen,
+   ni reparto. Aunque el instalador entre en Oficina, ahí no hay nada tuyo. */
+
+function empaquetar(t){
+  const p = { v:1, n:t.nombre, z:t.zona, s:t.sistema, vi:t.visita,
+    mo: num(t.dinero.cobroMontaje) };
+  // se comprime en base64 para que el enlace no sea eterno
+  const txt = JSON.stringify(p);
+  const bytes = new TextEncoder().encode(txt);
+  let bin = ''; bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+function desempaquetar(c){
+  try {
+    const b64 = c.replace(/-/g,'+').replace(/_/g,'/');
+    const bin = atob(b64);
+    const bytes = Uint8Array.from(bin, ch => ch.charCodeAt(0));
+    const p = JSON.parse(new TextDecoder().decode(bytes));
+    if (!p || p.v !== 1 || !p.s) return null;
+    return p;
+  } catch(e){ return null; }
+}
+
+function enlaceDe(t){
+  const base = location.origin + location.pathname;
+  return base + '#t=' + empaquetar(t);
+}
+
+async function enviarTrabajo(){
+  const t = activo();
+  const url = enlaceDe(t);
+  const texto = 'Trabajo: ' + t.nombre + (t.zona ? ' · ' + t.zona : '')
+    + '\n\nAbre este enlace y se te guarda en LLEnergy con el diseño, las '
+    + 'protecciones y los materiales:\n' + url;
+  if (navigator.share){
+    try { await navigator.share({ title:'LLEnergy · ' + t.nombre, text:texto }); return; } catch(e){}
+  }
+  try { await navigator.clipboard.writeText(texto);
+    alert('Enlace copiado. Pégalo en WhatsApp y mándaselo.'); }
+  catch(e){ prompt('Copia este enlace y mándaselo por WhatsApp:', url); }
+}
+
+/* si la app se abre con un trabajo dentro del enlace, se ofrece guardarlo */
+function mirarEnlace(){
+  const h = location.hash || '';
+  if (!h.startsWith('#t=')) return;
+  const p = desempaquetar(h.slice(3));
+  history.replaceState(null, '', location.pathname);
+  if (!p) return alert('Ese enlace no se pudo leer. Pide que te lo manden otra vez entero.');
+  if (!confirm('¿Guardar el trabajo «' + p.n + '»' + (p.z ? ' de ' + p.z : '') + '?')) return;
+  const t = nuevoTrabajo(p.n, p.z);
+  t.sistema = { ...SISTEMA, ...(p.s||{}) };
+  t.visita  = { ...VISITA,  ...(p.vi||{}) };
+  t.dinero  = { ...DINERO, cobroMontaje: p.mo || 0 };
+  t.recibido = true;
   guardar();
 }
 
@@ -657,6 +741,7 @@ document.addEventListener('click', ev => {
   const ir = ev.target.closest('[data-ir]');
   if (ir){ S.activo = ir.dataset.ir; pintar(); return; }
   if (ev.target.id === 'btnNuevo'){ nuevoTrabajo(); pintar(); window.scrollTo(0,0); return; }
+  if (ev.target.id === 'btnEnviar'){ enviarTrabajo(); return; }
   if (ev.target.id === 'btnBorrar'){
     const t = activo();
     if (confirm('¿Borrar «' + t.nombre + '»? No se puede deshacer.')){
@@ -693,6 +778,7 @@ document.addEventListener('change', ev => {
 
 /* ═══════════════ arranque ═══════════════ */
 cargar();
+mirarEnlace();
 pintar();
 
 /* que funcione sin internet: solo se activa si la app está en su propia dirección */
