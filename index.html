@@ -1,0 +1,242 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>LLEnergy</title>
+<link rel="icon" href="icono-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1F7A4D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="LLEnergy">
+<link rel="apple-touch-icon" href="icono-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap">
+
+<style>
+:root{
+  --bg:#EDEFEA; --surface:#FAFBF8; --surface-2:#E4E8DF;
+  --ink:#131A14; --ink-2:#36443A; --muted:#61705F;
+  --line:#CFD6C9; --line-soft:#E0E5DB;
+  --ok:#1F7A4D; --ok-soft:#D7EDDF;
+  --warn:#A9720F; --warn-soft:#F6EBD1;
+  --bad:#B23A2E; --bad-soft:#F7E2DE;
+  --info:#1D5C82; --info-soft:#DAE9F3;
+  --shadow:0 1px 2px rgba(19,26,20,.06), 0 3px 12px rgba(19,26,20,.05);
+  --r:12px; --nav:64px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D120E; --surface:#151D18; --surface-2:#1D2820;
+    --ink:#E6EDE6; --ink-2:#BDCBBF; --muted:#8B9C8C;
+    --line:#26332A; --line-soft:#1F2B23;
+    --ok:#5FCB90; --ok-soft:#11301E;
+    --warn:#E0B84A; --warn-soft:#332911;
+    --bad:#E5776A; --bad-soft:#331A17;
+    --info:#63B4E4; --info-soft:#12293A;
+    --shadow:0 1px 2px rgba(0,0,0,.45), 0 3px 12px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D120E; --surface:#151D18; --surface-2:#1D2820;
+  --ink:#E6EDE6; --ink-2:#BDCBBF; --muted:#8B9C8C;
+  --line:#26332A; --line-soft:#1F2B23;
+  --ok:#5FCB90; --ok-soft:#11301E;
+  --warn:#E0B84A; --warn-soft:#332911;
+  --bad:#E5776A; --bad-soft:#331A17;
+  --info:#63B4E4; --info-soft:#12293A;
+  --shadow:0 1px 2px rgba(0,0,0,.45), 0 3px 12px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--ink);
+  font-family:"Source Sans 3",system-ui,sans-serif; font-size:16px; line-height:1.5;
+  -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent}
+h1,h2,h3{font-family:"Barlow Semi Condensed",system-ui,sans-serif; margin:0; text-wrap:balance}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums}
+button{font:inherit; cursor:pointer}
+
+/* ── cabecera ── */
+.top{position:sticky; top:0; z-index:40; background:var(--bg);
+  border-bottom:1px solid var(--line); padding:10px 16px 9px}
+.top-fila{display:flex; align-items:center; justify-content:space-between; gap:10px}
+.logo{display:flex; align-items:center; gap:8px; min-width:0}
+.logo .sol{width:26px; height:26px; flex-shrink:0}
+.logo .n{font-family:"Barlow Semi Condensed",sans-serif; font-size:21px; font-weight:700;
+  letter-spacing:-.01em; line-height:1}
+.logo .n span{color:var(--ok)}
+.rol{display:flex; gap:3px; background:var(--surface-2); border-radius:99px; padding:3px}
+.rol button{border:none; background:transparent; color:var(--muted); border-radius:99px;
+  padding:5px 11px; font-size:11px; font-weight:700; font-family:"IBM Plex Mono",monospace;
+  letter-spacing:.05em; text-transform:uppercase}
+.rol button[aria-pressed="true"]{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
+.trabajo-actual{margin-top:8px; display:flex; align-items:center; gap:8px;
+  background:var(--surface); border:1px solid var(--line); border-radius:99px;
+  padding:6px 8px 6px 13px; font-size:14px}
+.trabajo-actual .et{font-family:"IBM Plex Mono",monospace; font-size:9.5px; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+.trabajo-actual .nm{font-weight:600; flex:1; min-width:0; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap}
+.trabajo-actual button{border:none; background:var(--surface-2); color:var(--ink-2);
+  border-radius:99px; padding:5px 12px; font-size:12.5px; font-weight:600}
+
+/* ── contenido ── */
+main{padding:16px 16px calc(var(--nav) + 28px); max-width:960px; margin:0 auto}
+.pant{display:none}
+.pant.on{display:block}
+.caja{background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+  margin-bottom:14px; overflow:hidden; box-shadow:var(--shadow)}
+.caja > h2{font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.1em; color:var(--muted);
+  padding:11px 15px; background:var(--surface-2); border-bottom:1px solid var(--line-soft)}
+.cuerpo{padding:6px 15px 13px}
+.pista{font-size:13.5px; color:var(--muted); padding:0 15px 13px; line-height:1.5}
+.pista b{color:var(--ink-2)}
+
+/* ── campos ── */
+.campo{display:grid; grid-template-columns:1fr 142px; gap:10px; align-items:center;
+  padding:10px 0; border-bottom:1px solid var(--line-soft)}
+.campo:last-child{border-bottom:none}
+.campo > label{font-size:15px; line-height:1.3}
+.campo > label small{display:block; font-size:12.5px; color:var(--muted); margin-top:2px}
+.campo input,.campo select,.campo textarea{width:100%; font:inherit; font-size:16px;
+  padding:9px 10px; border:1px solid var(--line); border-radius:8px;
+  background:var(--surface-2); color:var(--ink); text-align:right;
+  font-family:"IBM Plex Mono",monospace; font-weight:600}
+.campo select{text-align:left; font-family:"Source Sans 3",sans-serif; font-weight:600; font-size:14px}
+.campo.ancho{grid-template-columns:1fr}
+.campo.ancho input,.campo.ancho textarea,.campo.ancho select{text-align:left;
+  font-family:"Source Sans 3",sans-serif; font-weight:400}
+.campo textarea{min-height:76px; resize:vertical; line-height:1.45}
+.campo .calc{text-align:right; font-family:"IBM Plex Mono",monospace; font-weight:700;
+  font-size:13.5px; color:var(--ok); white-space:nowrap}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{
+  outline:2px solid var(--ink); outline-offset:2px}
+
+/* ── filas de resultado ── */
+.fila{display:flex; justify-content:space-between; gap:12px; align-items:baseline;
+  padding:10px 0; border-bottom:1px solid var(--line-soft)}
+.fila:last-child{border-bottom:none}
+.fila .tx{flex:1; min-width:0}
+.fila small{display:block; font-size:12.5px; color:var(--muted); margin-top:2px; line-height:1.45}
+.fila .vl{font-family:"IBM Plex Mono",monospace; font-weight:700; font-size:14px;
+  text-align:right; white-space:nowrap; flex-shrink:0}
+.sep{font-family:"IBM Plex Mono",monospace; font-size:10px; font-weight:700;
+  letter-spacing:.09em; text-transform:uppercase; color:var(--info);
+  background:var(--info-soft); margin:8px -15px 2px; padding:8px 15px}
+.ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)} .info{color:var(--info)}
+
+/* ── titular verde ── */
+.titular{background:var(--ok-soft); margin:-6px -15px 8px; padding:15px;
+  border-bottom:1px solid var(--line-soft)}
+.titular > b{font-family:"Barlow Semi Condensed",sans-serif; font-size:23px; font-weight:700;
+  color:var(--ok); display:block; line-height:1.12}
+.titular small b{color:var(--ink)}
+.titular small{display:block; font-size:13.5px; color:var(--ink-2); margin-top:6px; line-height:1.45}
+.titular.rojo{background:var(--bad-soft)} .titular.rojo > b{color:var(--bad)}
+
+/* ── trabajos ── */
+.trab{display:flex; align-items:center; gap:12px; width:100%; text-align:left;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+  padding:13px 15px; margin-bottom:9px}
+.trab[aria-current="true"]{border-color:var(--ok); border-width:2px; background:var(--ok-soft)}
+.trab .d{flex:1; min-width:0}
+.trab .nm{font-weight:700; font-size:16.5px}
+.trab .zn{font-size:13px; color:var(--muted); margin-top:1px}
+.estado{font-family:"IBM Plex Mono",monospace; font-size:9.5px; font-weight:700;
+  letter-spacing:.06em; text-transform:uppercase; padding:4px 8px; border-radius:99px;
+  white-space:nowrap}
+.estado.visita{background:var(--surface-2); color:var(--muted)}
+.estado.cotizado{background:var(--info-soft); color:var(--info)}
+.estado.aceptado{background:var(--warn-soft); color:var(--warn)}
+.estado.montado{background:var(--ok-soft); color:var(--ok)}
+.btn{display:block; width:100%; border:none; border-radius:var(--r); padding:14px;
+  font-size:16px; font-weight:700; background:var(--ok); color:#fff; margin-top:4px}
+.btn.gris{background:var(--surface-2); color:var(--ink-2)}
+.btn.peligro{background:transparent; color:var(--bad); border:1px solid var(--bad)}
+.vacio{text-align:center; padding:34px 20px; color:var(--muted)}
+.vacio b{display:block; font-family:"Barlow Semi Condensed",sans-serif; font-size:21px;
+  color:var(--ink); margin-bottom:5px}
+
+/* ── dinero ── */
+.kpi{background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+  padding:15px; margin-bottom:10px}
+.kpi .k{font-family:"IBM Plex Mono",monospace; font-size:9.5px; font-weight:700;
+  letter-spacing:.09em; text-transform:uppercase; color:var(--muted)}
+.kpi .v{font-family:"IBM Plex Mono",monospace; font-size:30px; font-weight:700;
+  margin-top:3px; line-height:1.05}
+.kpi .s{font-size:13px; color:var(--muted); margin-top:3px}
+.kpi.dos{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+.kpi.dos .v{font-size:21px}
+.bloqueado{text-align:center; padding:46px 24px; color:var(--muted)}
+.bloqueado b{display:block; font-family:"Barlow Semi Condensed",sans-serif; font-size:22px;
+  color:var(--ink); margin-bottom:6px}
+
+/* ── navegación inferior ── */
+.nav{position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex;
+  background:var(--surface); border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom)}
+.nav button{flex:1; border:none; background:transparent; color:var(--muted);
+  padding:9px 2px 10px; display:flex; flex-direction:column; align-items:center; gap:3px;
+  font-size:10.5px; font-weight:700; font-family:"IBM Plex Mono",monospace; letter-spacing:.03em}
+.nav button svg{width:21px; height:21px}
+.nav button[aria-current="page"]{color:var(--ok)}
+.nav button[hidden]{display:none}
+
+@media (min-width:760px){
+  .campo{grid-template-columns:1fr 170px}
+  main{padding-bottom:30px}
+  .nav{position:sticky; top:0; bottom:auto; border-top:none;
+    border-bottom:1px solid var(--line); max-width:960px; margin:0 auto}
+  .nav button{flex-direction:row; gap:7px; font-size:12px; padding:12px 6px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .pant.on{animation:entra .18s ease-out}
+  @keyframes entra{from{opacity:.4} to{opacity:1}}
+}
+</style>
+
+<div class="top">
+  <div class="top-fila">
+    <div class="logo">
+      <svg class="sol" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="5" fill="var(--ok)"/>
+        <g stroke="var(--ok)" stroke-width="2" stroke-linecap="round">
+          <path d="M12 1.5v2.6M12 19.9v2.6M22.5 12h-2.6M4.1 12H1.5"/>
+          <path d="M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8M19.4 19.4l-1.8-1.8M6.4 6.4L4.6 4.6"/>
+        </g>
+      </svg>
+      <div class="n">LL<span>Energy</span></div>
+    </div>
+    <div class="rol" role="group" aria-label="Modo">
+      <button type="button" id="rolCampo" aria-pressed="false">Campo</button>
+      <button type="button" id="rolOficina" aria-pressed="true">Oficina</button>
+    </div>
+  </div>
+  <div class="trabajo-actual">
+    <span class="et">Trabajo</span>
+    <span class="nm" id="nmTrabajo">—</span>
+    <button type="button" id="btnCambiar">Cambiar</button>
+  </div>
+</div>
+
+<nav class="nav" aria-label="Secciones">
+  <button type="button" data-p="trabajos" aria-current="page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h12"/></svg>Trabajos</button>
+  <button type="button" data-p="visita">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/></svg>Visita</button>
+  <button type="button" data-p="diseno">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1"/><path d="M7 20h10M12 16v4"/></svg>Diseño</button>
+  <button type="button" data-p="dinero" id="navDinero">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Dinero</button>
+  <button type="button" data-p="ajustes">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Ajustes</button>
+</nav>
+
+<main>
+  <div class="pant on" id="p-trabajos"></div>
+  <div class="pant" id="p-visita"></div>
+  <div class="pant" id="p-diseno"></div>
+  <div class="pant" id="p-dinero"></div>
+  <div class="pant" id="p-ajustes"></div>
+</main>
+
+<script type="module" src="app.js"></script>

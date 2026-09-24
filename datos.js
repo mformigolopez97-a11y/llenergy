@@ -1,0 +1,107 @@
+/* ═══════════════════════════════════════════════════════════════
+   LLEnergy · BASE DE EQUIPOS
+   Trasladada tal cual desde la calculadora, sin retocar ni un número.
+
+   REGLA: solo lleva ok:true lo que salga de una ficha del fabricante que
+   se haya podido abrir y leer. Todo lo demás va con aviso, porque un
+   número inventado aquí termina en un equipo quemado.
+
+   Los datos se pueden escribir siempre a mano: esta lista es una
+   comodidad, no una obligación.
+   ═══════════════════════════════════════════════════════════════ */
+
+export const BATS={
+ 'manual':{n:'— Otro / meter los datos a mano —',manual:true},
+ 'fintera-5':{n:'Fintera 5 kWh · 51,2 V  (la que usas ahora)',v:51.2,ah:100,ides:100,icar:50,ok:false,ficha:'',
+   nota:'<b>No existe ficha pública de Fintera.</b> El 51,2 V y los 5 kWh son los que tú me diste; los 100 Ah salen de dividir 5.120 Wh entre 51,2 V. Los amperios del BMS <b>no los sé</b>: los he puesto en 100 A de descarga y 50 A de carga porque es lo normal en ese formato, pero <b>no son dato del fabricante</b>. Hazle una foto a la etiqueta lateral y corrige los dos números aquí antes de dimensionar nada.'},
+ 'todo-15360':{n:'Todo en uno 15,36 kWh · 51,2 V (300 Ah)',v:51.2,ah:300,ides:200,icar:100,ok:false,ficha:'',
+   nota:'Todo en uno de 15,36 kWh. Sin ficha del fabricante a la vista. 300 Ah sale de 15.360 Wh entre 51,2 V. Los amperios del BMS son una estimación del formato, <b>no un dato</b>: confírmalos en la etiqueta.'},
+ 'pylontech-us5000':{n:'Pylontech US5000C · 4,8 kWh · 48 V',v:48,ah:100,ides:80,icar:80,dod:0.95,
+   vcar:53.5,vflo:52.5,vmin:43.5,ok:true,
+   ficha:'https://www.energysynt.com/index.php/file/2022/08/FL065-Rev.001-ENG-Batt-US5000.pdf',
+   nota:'Ficha del fabricante. Es de <b>48 V de verdad</b> (15 celdas), no de 51,2 V: se carga a <b>52,5–53,5 V</b> y nunca a 56,8 V. 80 A es a la vez la corriente recomendada y la máxima continua, entre 10 y 40 °C. Descarga hasta el 95 %, o sea 4,56 kWh útiles. Comunica por CAN y RS485.'},
+ 'gen-51-100':{n:'Genérica 51,2 V · 100 Ah (5,12 kWh)',v:51.2,ah:100,ides:100,icar:50,ok:false,ficha:'',
+   nota:'Plantilla del formato más común de rack. Los amperios son los típicos, no los de tu batería concreta: <b>léelos en la etiqueta y corrígelos</b>.'},
+ 'gen-51-200':{n:'Genérica 51,2 V · 200 Ah (10,24 kWh)',v:51.2,ah:200,ides:200,icar:100,ok:false,ficha:'',
+   nota:'Plantilla. Confirma los amperios del BMS en la etiqueta.'},
+ 'gen-51-280':{n:'Genérica 51,2 V · 280 Ah (14,3 kWh)',v:51.2,ah:280,ides:200,icar:100,ok:false,ficha:'',
+   nota:'Plantilla. Confirma los amperios del BMS en la etiqueta.'},
+ 'ecoworthy-cubix100':{n:'ECO-WORTHY Cubix100 · 5,12 kWh · 51,2 V',v:51.2,ah:100,ides:100,icar:100,dod:0.8,ok:false,
+   ficha:'https://www.eco-worthy.com/products/eco-worthy-51-2v-100ah-lifepo4-lithium-battery-5-12kwh-capacity-server-rack-battery',
+   nota:'Formato rack de 3U, 16 celdas, 5,12 kWh. BMS de 100 A de carga y de descarga. Certificada UL 1973 y UL 9540A, 6.000 ciclos al 80 % de descarga y 10 años de garantía; admite hasta 32 en paralelo. He dejado la reserva al <b>80 %</b>, que es la profundidad sobre la que el fabricante mide esos ciclos. Datos de la ficha comercial de ECO-WORTHY: <b>no pude abrir el manual técnico</b> para confirmar los voltajes exactos de carga, así que los de abajo salen del número de celdas.'},
+ 'ecoworthy-50':{n:'ECO-WORTHY 48 V · 50 Ah apilable (2,56 kWh)',v:51.2,ah:50,ides:100,icar:50,dod:0.8,ok:false,
+   ficha:'https://www.eco-worthy.com/products/eco-worthy-48v-50ah-stackable-lifepo4-battery',
+   nota:'La pequeña apilable: 2,56 kWh por módulo, hasta 32 en paralelo (76,8 kWh). Aguanta descarga a 2C, o sea unos 100 A de punta en 50 Ah. Útil para el cliente que arranca chico y quiere ir sumando módulos sin cambiar nada. Datos de la ficha comercial.'},
+ 'ecoworthy-314':{n:'ECO-WORTHY PowerMega 314 · 16,07 kWh · 51,2 V',v:51.2,ah:314,ides:200,icar:200,dod:0.8,ok:false,
+   ficha:'https://www.eco-worthy.com/products/eco-worthy-48v-314ah-lifepo4-battery-solar-battery-backup-for-home-wall-mount',
+   nota:'La grande de pared: 314 Ah, 16,07 kWh, BMS de 200 A con balanceo activo, hasta 15 en paralelo. Alternativa de fabricante identificable y con garantía escrita frente a los todo-en-uno sin marca. Datos de la ficha comercial.'},
+ 'gen-24-100':{n:'Genérica 25,6 V · 100 Ah (2,56 kWh)',v:25.6,ah:100,ides:100,icar:50,ok:false,ficha:'',
+   nota:'Plantilla de 24 V. Ojo: <b>no sirve para un inversor de 48 V</b>. Solo para equipos pequeños.'},
+};
+
+export const MODELOS={
+ 'manual':{n:'— Otro / meter los datos a mano —',manual:true},
+ 'must-6048-eco':{n:'MUST PV18-6048 ECO · 6 kW',kw:6,vnom:48,icar:100,vflot:54.8,vtope:60,pbat:5500,vac:'230',vmax:450,vmin:60,vmpmax:360,nmppt:1,impp:28,ok:true,
+   ficha:'https://solarwarehousesa.com/products/must-6kw-6000w-hybrid-inverter-48v-pv18-6048-eco',
+   nota:'Ficha oficial de MUST (catálogo PV1800 ECO). Admite hasta 450 V en circuito abierto, pero el MPPT solo regula entre 60 y 360 V. Carga máxima 100 A (solar o red). En modo batería da 5.500 W, no 6.000. Flotación 54,8 V y corte por sobretensión a 60 V. Habla con baterías de litio por CAN.'},
+ 'must-proii-6k':{n:'MUST PV1800 PRO II · 6 kW',kw:6,vnom:48,icar:100,vflot:54.8,vtope:60,pbat:5500,vac:'230',vmax:500,vmin:120,vmpmax:430,nmppt:1,impp:28,ok:false,
+   ficha:'https://www.mustpower.com/',
+   nota:'MPPT de 120 a 430 V según el fabricante. Confirma el tope de Voc en la etiqueta del equipo.'},
+ 'must-proii-4k':{n:'MUST PV1800 PRO II · 4 kW',kw:4,vnom:48,icar:100,vflot:54.8,vtope:60,pbat:3500,vac:'230',vmax:500,vmin:90,vmpmax:430,nmppt:1,impp:22,ok:false,
+   ficha:'https://www.mustpower.com/',nota:'MPPT de 90 a 430 V. Confirma en la etiqueta.'},
+ 'must-5048':{n:'MUST PV18-5048 · 5 kW',kw:5,vnom:48,icar:100,vflot:54.8,vtope:60,pbat:4500,vac:'230',vmax:450,vmin:60,vmpmax:360,nmppt:1,impp:22,ok:false,
+   ficha:'https://www.mustpower.com/',nota:'Misma familia que el 6048. Confirma los números en la etiqueta.'},
+ 'sako-sunon-145':{n:'SAKO Sunon Pro 5,5 kW · versión 145 V',kw:5.5,vnom:48,icar:100,vflot:0,vtope:0,pbat:5500,vac:'230',vmax:145,vmin:60,vmpmax:145,nmppt:1,impp:60,ok:true,
+   ficha:'https://sakopower.com/product-sunon-pro-series-5kw-off-solar-inverter',
+   nota:'CUIDADO: tope de 145 V. Con paneles de 46 V solo caben DOS en serie. Si le metes 6 en serie lo destruyes al primer amanecer.'},
+ 'sako-sunon-450':{n:'SAKO Sunon Pro / Sunpolo · versión 450 V',kw:5,vnom:48,icar:100,vflot:0,vtope:0,pbat:5000,vac:'230',vmax:450,vmin:90,vmpmax:430,nmppt:1,impp:22,ok:true,
+   ficha:'https://sakopower.com/solar-inverter',
+   nota:'La versión de entrada alta. SAKO vende las dos: comprueba en la etiqueta si tu equipo es de 145 V o de 450 V antes de cablear nada.'},
+ 'growatt-5000es':{n:'Growatt SPF 5000 ES · 5 kW',kw:5,vnom:48,icar:80,vflot:0,vtope:0,pbat:5000,vac:'230',vmax:450,vmin:120,vmpmax:430,nmppt:1,impp:18,ok:true,
+   ficha:'https://lifetide.co.za/data-sheets/Growatt%20SPF%205000%20ES%20Data%20Sheet.pdf',
+   nota:'Ficha verificada: 450 V máximo de entrada FV y 5000 W de campo solar.'},
+ 'growatt-6000t':{n:'Growatt SPF 6000T · 6 kW split-phase',kw:6,vnom:48,icar:80,vflot:0,vtope:0,pbat:6000,vac:'240',vmax:450,vmin:120,vmpmax:430,nmppt:2,impp:18,ok:false,
+   ficha:'https://us.growatt.com/products/spf-3500-5000-us',
+   nota:'Salida split-phase 120/240 V, que encaja bien con el bifásico cubano. Confirma en la etiqueta.'},
+ /* ---- PowMr ---- */
+ 'powmr-62k-450':{n:'PowMr POW-HVM6.2K · 6,2 kW · ventana 60–450 V',kw:6.2,vnom:48,icar:120,vflot:0,vtope:0,pbat:6200,
+   vac:'230',vmax:450,vmin:60,vmpmax:430,nmppt:1,impp:27,ok:false,
+   ficha:'https://powmr.com/products/all-in-one-inverter-charger-for-parallel-6200w-220vac-48vdc',
+   nota:'<b>PowMr vende el mismo «6,2 kW» con varias ventanas de MPPT distintas</b> según el sufijo (-K, -M, -N, -E, -LIP, -PRO): unas regulan de 60 a 450 V y otras de 90 a 500 V. Esta es la de 60–450 V. Salida 220–230 V, controlador MPPT de 120 A, corriente máxima de entrada FV 27 A. <b>Datos de tienda, no de ficha del fabricante</b> (su web me bloqueó el acceso): antes de cablear, lee la etiqueta lateral y comprueba la ventana de tu unidad.'},
+ 'powmr-62k-500':{n:'PowMr POW-HVM6.2M / -N · 6,2 kW · ventana 90–500 V',kw:6.2,vnom:48,icar:120,vflot:0,vtope:0,pbat:6200,
+   vac:'230',vmax:500,vmin:90,vmpmax:480,nmppt:1,impp:27,ok:false,
+   ficha:'https://www.solar-stack.com/en/inverter/powmr/pow-hvm6-2m-48v-n',
+   nota:'La variante de entrada alta: hasta 500 V en circuito abierto y MPPT de 90 a 500 V. Mismo cuerpo y mismo nombre comercial que la de 60–450 V. <b>Equivocarse de variante destroza el inversor al primer amanecer frío</b>, igual que pasa con las dos SAKO. Datos de tienda, no de ficha oficial.'},
+ 'powmr-6500':{n:'PowMr 6,5 kW híbrido (POW-HVM6.5K)',kw:6.5,vnom:48,icar:100,vflot:0,vtope:0,pbat:6500,
+   vac:'230',vmax:500,vmin:120,vmpmax:450,nmppt:1,impp:22,ok:false,
+   ficha:'https://eu.powmr.com/products/hybrid-inverter-charger-6500w-220vac-48vdc',
+   nota:'No conseguí abrir la ficha oficial (su servidor rechaza el acceso automático). Los números son de catálogo de tienda: <b>métele los de la etiqueta a mano antes de dimensionar</b>.'},
+
+ /* ---- SUMRY (ojo: se escribe SUMRY, no SUMRI) ---- */
+ 'sumry-sp-62':{n:'SUMRY SP 6,2 kW · 48 V',kw:6.2,vnom:48,icar:110,vflot:0,vtope:0,pbat:6200,
+   vac:'230',vmax:450,vmin:55,vmpmax:430,nmppt:1,impp:22,ok:false,
+   ficha:'https://manuals.plus/category/sumry',
+   nota:'Serie SP, la que más se ve. MPPT de 55 a 450 V, tope de 450 V en circuito abierto, controlador solar de 110 A y campo solar máximo de 6 kW. <b>La corriente máxima de entrada FV no la pude confirmar</b>: he puesto 22 A, que es lo normal en esta clase, pero compruébalo. El fabricante no publica ficha abierta; los datos son del manual de usuario indexado.'},
+ 'sumry-sp-42':{n:'SUMRY SP 4,2 kW · 48 V',kw:4.2,vnom:48,icar:80,vflot:0,vtope:0,pbat:4200,
+   vac:'230',vmax:450,vmin:55,vmpmax:430,nmppt:1,impp:18,ok:false,
+   ficha:'https://manuals.plus/category/sumry',
+   nota:'Misma familia que el de 6,2 kW, con campo solar más pequeño. Carga solar 60–80 A según la versión. Datos del manual de usuario, no de ficha oficial: confirma en la etiqueta.'},
+ 'sumry-102':{n:'SUMRY 10,2 kW · 48 V · doble MPPT',kw:10.2,vnom:48,icar:160,vflot:0,vtope:0,pbat:10200,
+   vac:'230',vmax:500,vmin:90,vmpmax:480,nmppt:2,impp:22,ok:false,
+   ficha:'https://manuals.plus/category/sumry',
+   nota:'El grande de SUMRY: dos MPPT independientes, hasta 500 V de entrada y 160 A de carga. Para casas con aire acondicionado o taller. Datos de catálogo, no de ficha oficial.'},
+
+ /* ---- ECO-WORTHY (salida bifásica 120/240 V, igual que la red cubana) ---- */
+ 'ecoworthy-6k':{n:'ECO-WORTHY 6 kW · bifásico 120/240 V',kw:6,vnom:48,icar:120,vflot:0,vtope:0,pbat:6000,
+   vac:'240',vmax:500,vmin:125,vmpmax:425,nmppt:1,impp:27,ok:false,
+   ficha:'https://www.eco-worthy.com/products/eco-worthy-6kw-solar-off-grid-split-phase-aio-inverter-48vdc-to-240vac-9kw-500v-pv-input',
+   nota:'<b>Sale en 120/240 V bifásico, que es exactamente la topología de la red cubana</b> — encaja mejor que un europeo de 230 V. Campo solar hasta 9 kW, 500 V en circuito abierto, MPPT de 125 a 425 V, carga solar 120 A, pico 12 kW, hasta 6 en paralelo. Datos de la ficha comercial del fabricante; no pude abrir el manual técnico para confirmar la corriente de entrada FV (he puesto 27 A).'},
+ 'ecoworthy-5k':{n:'ECO-WORTHY 5 kW · 48 V',kw:5,vnom:48,icar:80,vflot:0,vtope:0,pbat:5000,
+   vac:'120',vmax:500,vmin:120,vmpmax:450,nmppt:1,impp:22,ok:false,
+   ficha:'https://www.eco-worthy.com/products/5000w-solar-hybrid-inverter-charger-48v-dc-to-120v-240v-ac-split-phase-power-inverter',
+   nota:'Campo solar 5.500 W, entrada de 120 a 500 V, carga solar 80 A, pico 10 kW. <b>Cuidado con la salida:</b> el título oficial dice 120 V y algunas tiendas lo anuncian como bifásico 120/240. Son cosas distintas y cambian todo el cableado de la casa: <b>confírmalo antes de comprarlo</b>.'},
+ 'ecoworthy-10k':{n:'ECO-WORTHY 10 kW · bifásico · doble MPPT',kw:10,vnom:48,icar:200,vflot:0,vtope:0,pbat:10000,
+   vac:'240',vmax:500,vmin:120,vmpmax:450,nmppt:2,impp:27,ok:false,
+   ficha:'https://www.eco-worthy.com/products/eco-worthy-10000w-solar-off-grid-inverter-charger-48v-dc-to-240v-ac-split-phase-power-inverter',
+   nota:'Dos MPPT de 5.500 W cada uno (11 kW de paneles en total) y hasta 200 A de carga de batería. Salida bifásica 120/240 V. Datos de la ficha comercial.'},
+};
