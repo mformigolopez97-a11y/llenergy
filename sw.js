@@ -12,7 +12,7 @@
    almacenamiento del navegador, no aquí.
    ═══════════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'llenergy-v1';
+const VERSION = 'llenergy-v2';
 
 const ARCHIVOS = [
   './',

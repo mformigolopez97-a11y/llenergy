@@ -13,7 +13,8 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
 const co  = x => String(x).replace('.', ',');
-const din = n => '$' + Math.round(n).toLocaleString('es-ES');
+const miles = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const din = n => '$' + miles(n);
 
 /* ─────────── estado ─────────── */
 const SISTEMA = { pinv:6, vac:230, vbat:51.2, ah:100, abms:100, nbat:1, icar:100,
@@ -31,9 +32,31 @@ const DINERO_EJEMPLO = { kit:2500, ppan:180, prot:600, cab:180, estr:200, obra:3
 const VISITA = { consumo:'', tipoTecho:'plano', orientacion:'sur', sombras:'no',
   neutro:'sin revisar', equiposCasa:'', pide:'', puede:'', extra:'', notas:'' };
 
-const AJUSTES = { usdCup:0, cambioFecha:'', minPct:18, socioPct:30, fondoPct:3, capital:0 };
+const AJUSTES = { usdCup:0, cambioFecha:'', minPct:18, socioPct:30, fondoPct:3, capital:0,
+  claveHash:'' };   // de la clave solo se guarda su huella, nunca la clave
 
 let S = { rol:'oficina', activo:null, ajustes:{...AJUSTES}, trabajos:[] };
+
+/* ─────────── candado de Oficina ───────────
+   La clave nunca se guarda: se guarda su huella. Quien abra el
+   almacenamiento del teléfono ve un churro de letras, no el número.
+   Aviso honesto: esto para a una persona normal, no a alguien que se
+   ponga a hurgar en las tripas del navegador a propósito. */
+let abierto = false;
+try { abierto = sessionStorage.getItem('llenergy-abierto') === '1'; } catch(e){}
+
+async function huella(txt){
+  if (!(crypto && crypto.subtle)) return 'simple:' + txt;   // respaldo si no hay https
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('LLEnergy·' + txt));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2,'0')).join('');
+}
+const hayClave = () => !!S.ajustes.claveHash;
+const puedeOficina = () => !hayClave() || abierto;
+
+function marcarAbierto(v){
+  abierto = v;
+  try { v ? sessionStorage.setItem('llenergy-abierto','1') : sessionStorage.removeItem('llenergy-abierto'); } catch(e){}
+}
 
 function cargar(){
   try {
@@ -48,6 +71,7 @@ function cargar(){
   } catch(e){ /* si el guardado está corrupto, se empieza limpio */ }
   if (!S.trabajos.length) nuevoTrabajo('Ejemplo · casa de El Cobre', 'El Cobre, Santiago', true);
   if (!S.trabajos.find(t => t.id === S.activo)) S.activo = S.trabajos[0].id;
+  if (hayClave() && !abierto) S.rol = 'campo';
 }
 function guardar(){ try { localStorage.setItem(LS, JSON.stringify(S)); } catch(e){} }
 
@@ -270,7 +294,8 @@ function pintarDiseno(){
   /* --- compatibilidad --- */
   const c = M.compatibilidad(d, inv, bat);
   h += caja('¿Se llevan bien la batería y el inversor?',
-    c.filas.map(f => fila(f.tit, f.valor, f.nota, f.estado)).join(''),
+    c.filas.map(f => fila('<span class="pt ' + f.estado + '"></span>' + f.tit,
+      f.valor, f.nota, f.estado)).join(''),
     c.vOK
       ? '<b>Ajustes para meterle al inversor</b> (' + c.celdas + ' celdas, ' + co(d.Vbat) + ' V):<br>'
         + 'Tipo <b>LITIO / USER</b> · Absorción <b>' + co(c.vAbs) + ' V</b> · Flotación <b>' + co(c.vFlo)
@@ -330,7 +355,7 @@ function pintarDiseno(){
   /* --- comprobaciones --- */
   h += caja('Comprobaciones del diseño',
     M.comprobaciones(d).map(k => fila(
-      ({ok:'✅',warn:'⚠️',bad:'⛔',info:'ℹ️'})[k.e] + ' ' + k.t, '', k.n, k.e)).join(''));
+      '<span class="pt ' + k.e + '"></span>' + k.t, '', k.n, k.e)).join(''));
 
   $('p-diseno').innerHTML = h;
 }
@@ -414,11 +439,38 @@ function pintarDinero(){
 /* ═══════════════ PANTALLA · AJUSTES ═══════════════ */
 function pintarAjustes(){
   const a = S.ajustes;
+
+  if (S.rol === 'campo'){
+    $('p-ajustes').innerHTML = caja('Sobre la aplicación',
+      fila('Light of Life Energy', 'LLEnergy', 'Versión 1')
+      + fila('Funciona sin internet', 'Sí', 'Una vez abierta, se queda guardada en el teléfono', 'ok')
+      + fila('Actualizaciones', 'Solas', 'Cuando hay una versión nueva se instala sola', 'ok'))
+      + caja('Qué hacer si algo no cuadra',
+        '<div class="titular azul"><b>Nunca improvises en el techo</b>'
+        + '<small>Si un número no te cuadra o el equipo no es el que dice la ficha, '
+        + 'para y pregunta antes de conectar nada. Un inversor mal cableado no tiene arreglo.</small></div>');
+    return;
+  }
+
   let h = caja('Reglas del negocio',
     campo('a_minPct','Margen mínimo','Por debajo de esto la app te avisa. Medido sobre el precio de venta', numInp('a_minPct', a.minPct, 0, 60, 1))
     + campo('a_fondoPct','Fondo de garantía','Nunca menos del 3 %', numInp('a_fondoPct', a.fondoPct, 3, 30, 1))
     + campo('a_socioPct','Parte de la socia','El resto es tuyo', numInp('a_socioPct', a.socioPct, 0, 100, 5)),
     'El margen mínimo está medido sobre el <b>precio de venta</b>, que es como lo enseñaba la calculadora. Si lo querías sobre lo invertido, dímelo y lo cambio: son cifras distintas.');
+
+  h += caja('Candado de Oficina',
+    (hayClave()
+      ? fila('Clave puesta', 'Sí',
+          'Quien abra la app entra en modo <b>Campo</b>. Para ver el dinero hace falta la clave. '
+          + 'Al salir de Oficina vuelve a echarse el candado, y al cerrar la app también.', 'ok')
+        + '<button type="button" class="btn gris" id="btnCambiarClave" style="margin-top:12px">Cambiar la clave</button>'
+        + '<button type="button" class="btn peligro" id="btnQuitarClave" style="margin-top:8px">Quitar la clave</button>'
+      : fila('Sin clave', 'Cualquiera entra',
+          'Ahora mismo, quien tenga el enlace puede tocar <b>Oficina</b> y ver costes y márgenes. '
+          + 'Ponle una clave antes de pasarle el enlace al instalador.', 'bad')
+        + '<button type="button" class="btn" id="btnPonerClave" style="margin-top:12px">Poner una clave</button>'),
+    'De la clave no se guarda la clave, se guarda su huella. Aun así, esto para a una persona '
+    + 'normal, no a alguien que se ponga a hurgar a propósito en el navegador. Para lo que hace falta aquí, sobra.');
 
   h += caja('Tus datos',
     fila('Dónde están', 'En este teléfono', 'Los trabajos, los precios y los márgenes no salen de aquí. No se suben a ningún servidor', 'ok')
@@ -443,6 +495,7 @@ function pintar(){
   $('nmTrabajo').textContent = t.nombre;
   $('rolCampo').setAttribute('aria-pressed', S.rol === 'campo');
   $('rolOficina').setAttribute('aria-pressed', S.rol === 'oficina');
+  $('candado').hidden = puedeOficina();
   $('navDinero').hidden = S.rol === 'campo';
   if (S.rol === 'campo' && pantalla === 'dinero') pantalla = 'diseno';
 
@@ -458,12 +511,57 @@ function pintar(){
   guardar();
 }
 
+/* ═══════════════ la ventana de la clave ═══════════════ */
+let claveModo = 'entrar';   // 'entrar' | 'poner' | 'quitar'
+
+function pedirClave(modo){
+  claveModo = modo;
+  const T = { entrar:['Clave de Oficina','Escribe tu clave para ver los costes, los precios y el reparto.'],
+    poner:['Poner una clave','Elige un número de 4 a 8 cifras. Hace falta para entrar en Oficina desde cualquier teléfono.'],
+    quitar:['Quitar la clave','Escribe la clave actual. Después, Oficina quedará abierta para quien tenga el enlace.'] }[modo];
+  $('claveTit').textContent = T[0];
+  $('claveTx').textContent = T[1];
+  $('claveMsg').textContent = '';
+  $('claveInp').value = '';
+  $('pantClave').hidden = false;
+  setTimeout(() => $('claveInp').focus(), 60);
+}
+function cerrarClave(){ $('pantClave').hidden = true; $('claveInp').value = ''; }
+
+async function confirmarClave(){
+  const v = $('claveInp').value.trim();
+  const msg = t => { $('claveMsg').textContent = t; };
+  if (claveModo === 'poner'){
+    if (v.length < 4) return msg('Pon al menos 4 cifras.');
+    S.ajustes.claveHash = await huella(v);
+    marcarAbierto(true); cerrarClave(); pintar();
+    return;
+  }
+  const ok = (await huella(v)) === S.ajustes.claveHash;
+  if (!ok) return msg('Esa no es.');
+  if (claveModo === 'quitar'){ S.ajustes.claveHash = ''; marcarAbierto(true); }
+  else { marcarAbierto(true); S.rol = 'oficina'; }
+  cerrarClave(); pintar();
+}
+
+$('claveEntrar').addEventListener('click', confirmarClave);
+$('claveCancelar').addEventListener('click', cerrarClave);
+$('claveInp').addEventListener('keydown', e => { if (e.key === 'Enter') confirmarClave(); });
+$('pantClave').addEventListener('click', e => { if (e.target.id === 'pantClave') cerrarClave(); });
+
 /* ═══════════════ eventos ═══════════════ */
 document.querySelectorAll('.nav button').forEach(b =>
   b.addEventListener('click', () => { pantalla = b.dataset.p; window.scrollTo(0,0); pintar(); }));
 
-$('rolCampo').addEventListener('click', () => { S.rol = 'campo'; pintar(); });
-$('rolOficina').addEventListener('click', () => { S.rol = 'oficina'; pintar(); });
+$('rolCampo').addEventListener('click', () => {
+  S.rol = 'campo';
+  if (hayClave()) marcarAbierto(false);   // salir de Oficina vuelve a echar el candado
+  pintar();
+});
+$('rolOficina').addEventListener('click', () => {
+  if (!puedeOficina()) return pedirClave('entrar');
+  S.rol = 'oficina'; pintar();
+});
 $('btnCambiar').addEventListener('click', () => { pantalla = 'trabajos'; window.scrollTo(0,0); pintar(); });
 
 /* un solo oyente para todo: los campos se llaman igual que el dato que guardan */
@@ -533,6 +631,8 @@ document.addEventListener('click', ev => {
     return;
   }
   if (ev.target.id === 'btnImportar'){ $('fileImportar').click(); return; }
+  if (ev.target.id === 'btnPonerClave' || ev.target.id === 'btnCambiarClave'){ pedirClave('poner'); return; }
+  if (ev.target.id === 'btnQuitarClave'){ pedirClave('quitar'); return; }
 });
 
 document.addEventListener('change', ev => {
