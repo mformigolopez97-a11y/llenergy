@@ -33,9 +33,10 @@ const VISITA = { consumo:'', tipoTecho:'plano', orientacion:'sur', sombras:'no',
   neutro:'sin revisar', equiposCasa:'', pide:'', puede:'', extra:'', notas:'' };
 
 const AJUSTES = { usdCup:0, cambioFecha:'', minPct:18, socioPct:30, fondoPct:3, capital:0,
-  claveHash:'' };   // de la clave solo se guarda su huella, nunca la clave
+  claveHash:'',      // de la clave solo se guarda su huella, nunca la clave
+  dispositivo:'' };  // de quién es este teléfono, para saber quién intentó entrar
 
-let S = { rol:'oficina', activo:null, ajustes:{...AJUSTES}, trabajos:[] };
+let S = { rol:'oficina', activo:null, ajustes:{...AJUSTES}, trabajos:[], intentos:[] };
 
 /* ─────────── candado de Oficina ───────────
    La clave nunca se guarda: se guarda su huella. Quien abra el
@@ -441,7 +442,11 @@ function pintarAjustes(){
   const a = S.ajustes;
 
   if (S.rol === 'campo'){
-    $('p-ajustes').innerHTML = caja('Sobre la aplicación',
+    $('p-ajustes').innerHTML = caja('Este teléfono',
+      campo('a_dispositivo','¿De quién es este teléfono?',
+        'Para saber de qué aparato salen los avisos',
+        txtInp('a_dispositivo', a.dispositivo, 'Yunior · teléfono'), true))
+      + caja('Sobre la aplicación',
       fila('Light of Life Energy', 'LLEnergy', 'Versión 1')
       + fila('Funciona sin internet', 'Sí', 'Una vez abierta, se queda guardada en el teléfono', 'ok')
       + fila('Actualizaciones', 'Solas', 'Cuando hay una versión nueva se instala sola', 'ok'))
@@ -458,6 +463,11 @@ function pintarAjustes(){
     + campo('a_socioPct','Parte de la socia','El resto es tuyo', numInp('a_socioPct', a.socioPct, 0, 100, 5)),
     'El margen mínimo está medido sobre el <b>precio de venta</b>, que es como lo enseñaba la calculadora. Si lo querías sobre lo invertido, dímelo y lo cambio: son cifras distintas.');
 
+  h += caja('Este teléfono',
+    campo('a_dispositivo','¿De quién es este teléfono?',
+      'Aparece en el registro de intentos de entrar en Oficina',
+      txtInp('a_dispositivo', a.dispositivo, 'Marcos · teléfono'), true));
+
   h += caja('Candado de Oficina',
     (hayClave()
       ? fila('Clave puesta', 'Sí',
@@ -471,6 +481,26 @@ function pintarAjustes(){
         + '<button type="button" class="btn" id="btnPonerClave" style="margin-top:12px">Poner una clave</button>'),
     'De la clave no se guarda la clave, se guarda su huella. Aun así, esto para a una persona '
     + 'normal, no a alguien que se ponga a hurgar a propósito en el navegador. Para lo que hace falta aquí, sobra.');
+
+  const fecha = t => { const d = new Date(t);
+    const p = n => String(n).padStart(2,'0');
+    return p(d.getDate()) + '/' + p(d.getMonth()+1) + ' · ' + p(d.getHours()) + ':' + p(d.getMinutes()); };
+  const ints = S.intentos || [];
+  const fallidos = ints.filter(i => !i.ok).length;
+  h += caja('Quién ha intentado entrar en Oficina',
+    (ints.length
+      ? (fallidos
+          ? fila('<span class="pt bad"></span>Intentos con la clave equivocada', fallidos,
+              'Si tú no fuiste, cambia la clave.', 'bad')
+          : fila('<span class="pt ok"></span>Ningún intento fallido', ints.length + ' entradas',
+              'Todas con la clave correcta.', 'ok'))
+        + ints.slice(0,8).map(i => fila(
+            '<span class="pt ' + (i.ok ? 'ok' : 'bad') + '"></span>' + esc(i.quien),
+            fecha(i.cuando), i.ok ? 'Entró' : 'Clave equivocada', i.ok ? '' : 'bad')).join('')
+      : fila('Todavía nada', '—', 'Aquí van a aparecer los intentos de entrar en Oficina desde este teléfono')),
+    '<b>Esto solo ve lo que pasa en este teléfono.</b> Si alguien prueba a entrar desde el suyo, '
+    + 'el intento se queda anotado allí, no aquí. Para que te llegue un aviso al correo hace falta '
+    + 'conectar un servicio que mande los correos — dímelo y lo montamos.');
 
   h += caja('Tus datos',
     fila('Dónde están', 'En este teléfono', 'Los trabajos, los precios y los márgenes no salen de aquí. No se suben a ningún servidor', 'ok')
@@ -528,6 +558,17 @@ function pedirClave(modo){
 }
 function cerrarClave(){ $('pantClave').hidden = true; $('claveInp').value = ''; }
 
+/* Cada vez que alguien prueba a entrar en Oficina queda anotado: cuándo, desde
+   qué teléfono y si acertó. Se guardan los 30 últimos. Este registro vive en
+   ESTE teléfono; el intento hecho desde otro aparato se queda en el suyo. */
+function anotar(ok){
+  S.intentos = S.intentos || [];
+  S.intentos.unshift({ cuando: Date.now(), ok,
+    quien: (S.ajustes.dispositivo || '').trim() || 'Sin nombre' });
+  S.intentos = S.intentos.slice(0, 30);
+  guardar();
+}
+
 async function confirmarClave(){
   const v = $('claveInp').value.trim();
   const msg = t => { $('claveMsg').textContent = t; };
@@ -538,6 +579,7 @@ async function confirmarClave(){
     return;
   }
   const ok = (await huella(v)) === S.ajustes.claveHash;
+  if (claveModo === 'entrar') anotar(ok);
   if (!ok) return msg('Esa no es.');
   if (claveModo === 'quitar'){ S.ajustes.claveHash = ''; marcarAbierto(true); }
   else { marcarAbierto(true); S.rol = 'oficina'; }

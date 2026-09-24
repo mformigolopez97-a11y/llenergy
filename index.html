@@ -30,6 +30,7 @@
   --gris2:#5C6675;
 
   --azul:#3BBFF0;   --azul-h:#5FCFFA;  --azul-s:rgba(59,191,240,.13);
+  --naranja:#FF8A3C; --naranja-h:#FFA05E; --naranja-s:rgba(255,138,60,.14);
   --verde:#34D399;  --verde-s:rgba(52,211,153,.12);
   --ambar:#FBBF24;  --ambar-s:rgba(251,191,36,.12);
   --rojo:#FB7185;   --rojo-s:rgba(251,113,133,.12);
@@ -56,14 +57,15 @@ a{color:var(--azul)}
 .logo .sol{width:27px; height:27px; flex-shrink:0}
 .logo .n{font-family:"Archivo",sans-serif; font-size:22px; font-weight:800;
   letter-spacing:-.02em; line-height:1}
-.logo .n span{color:var(--azul)}
+.logo .n span{color:var(--naranja)}
 
 .rol{display:flex; gap:2px; background:var(--panel2); border-radius:10px; padding:3px;
   border:1px solid var(--linea)}
 .rol button{border:none; background:transparent; color:var(--gris); border-radius:7px;
   padding:6px 12px; font-size:10.5px; font-weight:700; font-family:"IBM Plex Mono",monospace;
   letter-spacing:.08em; text-transform:uppercase; display:flex; align-items:center; gap:5px}
-.rol button[aria-pressed="true"]{background:var(--azul); color:#04141C}
+.rol button[aria-pressed="true"]{background:var(--naranja); color:#180A02}
+.rol button:not([aria-pressed="true"]):hover{color:var(--naranja)}
 .rol button svg{width:12px; height:12px}
 
 .trabajo-actual{margin-top:9px; display:flex; align-items:center; gap:9px;
@@ -206,6 +208,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   border-radius:18px; padding:26px 22px; max-width:340px; width:100%; text-align:center}
 .clave h3{font-family:"Archivo",sans-serif; font-size:21px; font-weight:700; margin-bottom:6px}
 .clave p{font-size:13.5px; color:var(--gris); margin:0 0 18px; line-height:1.5}
+.clave .caja-c{border-top:3px solid var(--naranja)}
 .clave input{width:100%; font-family:"IBM Plex Mono",monospace; font-size:26px;
   font-weight:700; text-align:center; letter-spacing:.35em; padding:14px 10px;
   border:1px solid var(--linea); border-radius:11px; background:var(--panel2);
@@ -248,8 +251,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   <div class="top-fila">
     <div class="logo">
       <svg class="sol" viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="5" fill="#3BBFF0"/>
-        <g stroke="#3BBFF0" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="5" fill="#FF8A3C"/>
+        <g stroke="#FF8A3C" stroke-width="2" stroke-linecap="round">
           <path d="M12 1.5v2.6M12 19.9v2.6M22.5 12h-2.6M4.1 12H1.5"/>
           <path d="M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8M19.4 19.4l-1.8-1.8M6.4 6.4L4.6 4.6"/>
         </g>
