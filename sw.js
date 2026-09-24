@@ -12,7 +12,7 @@
    almacenamiento del navegador, no aquí.
    ═══════════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'llenergy-v5';
+const VERSION = 'llenergy-v7';
 
 const ARCHIVOS = [
   './',
@@ -20,6 +20,7 @@ const ARCHIVOS = [
   './app.js',
   './motor.js',
   './datos.js',
+  './cotizacion.js',
   './manifest.webmanifest',
   './icono-192.png',
   './icono-512.png',

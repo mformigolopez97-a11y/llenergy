@@ -1,3 +1,5 @@
+<!doctype html>
+<html lang="es">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>LLEnergy</title>
@@ -220,6 +222,89 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .clave .acciones{display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:16px}
 .clave .acciones .btn{margin-top:0}
 
+/* ── la cotización: documento en papel, no pantalla ── */
+.hojaCot{position:fixed; inset:0; z-index:80; background:#F6F4F0; overflow:auto;
+  -webkit-overflow-scrolling:touch}
+.hojaCot[hidden]{display:none}
+.barraCot{position:sticky; top:0; z-index:2; display:flex; gap:8px; align-items:center;
+  background:#FFF; border-bottom:1px solid #DED9D1; padding:10px 14px}
+.barraCot .tit{flex:1; font-family:"Archivo",sans-serif; font-weight:700; font-size:15px;
+  color:#1A1714; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.barraCot button{border:1px solid #DED9D1; background:#FFF; color:#3A342D;
+  border-radius:9px; padding:8px 13px; font-size:13.5px; font-weight:600}
+.barraCot button.prin{background:#E8701F; border-color:#E8701F; color:#FFF}
+
+.cot{max-width:720px; margin:0 auto; padding:26px 22px 60px; background:#FFF;
+  color:#1A1714; font-family:"IBM Plex Sans",system-ui,sans-serif;
+  font-size:15.5px; line-height:1.6; min-height:100%}
+.cot .cab{display:flex; justify-content:space-between; align-items:flex-start;
+  gap:16px; flex-wrap:wrap; padding-bottom:18px; border-bottom:2px solid #1A1714}
+.cot .marca{display:flex; align-items:center; gap:11px}
+.cot .emp{font-family:"Archivo",sans-serif; font-weight:800; font-size:19px;
+  letter-spacing:-.015em; line-height:1.1}
+.cot .lin{font-size:12.5px; color:#6B635A; margin-top:2px}
+.cot .ref{text-align:right; font-family:"IBM Plex Mono",monospace; font-size:10px;
+  letter-spacing:.11em; text-transform:uppercase; color:#8A8075}
+.cot .ref .fh{color:#1A1714; margin-top:3px; letter-spacing:.02em; text-transform:none;
+  font-size:12.5px}
+.cot h1{font-family:"Archivo",sans-serif; font-size:29px; font-weight:800;
+  letter-spacing:-.02em; margin:24px 0 0; line-height:1.15}
+.cot .zona{color:#6B635A; margin:4px 0 0; font-size:15px}
+.cot h2{font-family:"Archivo",sans-serif; font-size:13px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.11em; color:#8A8075;
+  margin:30px 0 12px; padding-bottom:7px; border-bottom:1px solid #E5E0D8}
+.cot .cuerpo{margin:0 0 12px; color:#3A342D}
+.cot .cuerpo b{color:#1A1714}
+
+.cot .destacado{margin-top:24px}
+.cot .precio-caja{background:#FBF5EE; border:1px solid #EEDFCC; border-radius:14px;
+  padding:20px 22px}
+.cot .precio-caja .et{font-family:"IBM Plex Mono",monospace; font-size:10px;
+  font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#8A8075}
+.cot .precio-caja .cifra{font-family:"IBM Plex Mono",monospace; font-size:40px;
+  font-weight:700; color:#C25A12; margin-top:6px; line-height:1; letter-spacing:-.02em}
+.cot .precio-caja .nota{font-size:13.5px; color:#6B635A; margin-top:9px}
+.cot .precio-caja .nota b{color:#1A1714}
+
+.cot table{width:100%; border-collapse:collapse; font-size:15px}
+.cot td{padding:11px 0; border-bottom:1px solid #EFEBE4; vertical-align:top}
+.cot td.v{text-align:right; font-family:"IBM Plex Mono",monospace; font-weight:600;
+  white-space:nowrap; padding-left:14px}
+.cot tr:last-child td{border-bottom:none}
+
+.cot .lista{margin:0; padding-left:20px; color:#3A342D; font-size:14.5px}
+.cot .lista li{margin-bottom:6px}
+.cot .lista b{color:#1A1714}
+.cot .condiciones{margin:0; padding-left:22px; color:#3A342D; font-size:15px}
+.cot .condiciones li{margin-bottom:12px}
+.cot .condiciones b{color:#1A1714}
+
+.cot .pie{margin-top:34px; padding-top:18px; border-top:2px solid #1A1714;
+  font-size:14px; color:#3A342D}
+.cot .pie .validez b{color:#1A1714}
+.cot .pie .pago{margin-top:7px; color:#6B635A; font-size:13.5px}
+
+@media (max-width:560px){
+  .cot .cab{flex-direction:column; align-items:flex-start; gap:12px}
+  .cot .ref{text-align:left}
+  .cot h1{font-size:25px}
+  .cot .precio-caja .cifra{font-size:34px}
+  /* la tabla se parte en dos lineas: etiqueta arriba, dato abajo */
+  .cot table,.cot tbody,.cot tr,.cot td{display:block; width:100%}
+  .cot tr{padding:11px 0; border-bottom:1px solid #EFEBE4}
+  .cot tr:last-child{border-bottom:none}
+  .cot td{padding:0; border:none}
+  .cot td.v{text-align:left; padding:3px 0 0; color:#6B635A; white-space:normal}
+}
+
+@media print{
+  .barraCot{display:none}
+  .hojaCot{position:static; background:#FFF; overflow:visible}
+  .cot{max-width:none; padding:0; font-size:11pt}
+  .cot h2{page-break-after:avoid}
+  .cot .condiciones li,.cot .lista li{page-break-inside:avoid}
+}
+
 /* ── navegación inferior ── */
 .nav{position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex;
   background:rgba(10,11,13,.94); backdrop-filter:blur(12px);
@@ -298,6 +383,16 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   <div class="pant" id="p-dinero"></div>
   <div class="pant" id="p-ajustes"></div>
 </main>
+
+<div class="hojaCot" id="hojaCot" hidden>
+  <div class="barraCot">
+    <span class="tit" id="cotTit">Cotización</span>
+    <button type="button" id="cotImprimir">PDF</button>
+    <button type="button" id="cotCompartir" class="prin">Mandar</button>
+    <button type="button" id="cotCerrar">Cerrar</button>
+  </div>
+  <div id="cotCuerpo"></div>
+</div>
 
 <div class="clave" id="pantClave" hidden>
   <div class="caja-c">

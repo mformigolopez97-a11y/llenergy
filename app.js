@@ -7,6 +7,7 @@
 
 import * as M from './motor.js';
 import { MODELOS, BATS } from './datos.js';
+import { datosCot, htmlCot, empaquetarCot, desempaquetarCot } from './cotizacion.js';
 
 const LS = 'llenergy-v1';
 const $ = id => document.getElementById(id);
@@ -37,7 +38,8 @@ const VISITA = { consumo:'', tipoTecho:'plano', orientacion:'sur', sombras:'no',
 
 const AJUSTES = { usdCup:0, cambioFecha:'', minPct:18, socioPct:30, fondoPct:3, capital:0,
   claveHash:'',      // de la clave solo se guarda su huella, nunca la clave
-  dispositivo:'' };  // de quién es este teléfono, para saber quién intentó entrar
+  dispositivo:'',    // de quién es este teléfono, para saber quién intentó entrar
+  garantiaMeses:12, validezDias:15 };
 
 let S = { rol:'oficina', activo:null, ajustes:{...AJUSTES}, trabajos:[], intentos:[] };
 
@@ -425,6 +427,9 @@ function pintarDinero(){
     + campo('m_obra','Mano de obra','Lo que le pagas al equipo, en CUP', numInp('m_obra', m.obra, 0, 3000, 10))
     + campo('m_trans','Transporte','', numInp('m_trans', m.trans, 0, 1000, 10)));
 
+  h += '<button type="button" class="btn" id="btnCot" style="margin-bottom:13px">'
+    + 'Ver la cotización del cliente</button>';
+
   h += caja('Lo que le cobras',
     campo('m_precio','Precio al cliente','Siempre cotizado en dólares', numInp('m_precio', m.precio, 0, 30000, 10))
     + campo('m_cobroMontaje','De eso, cuánto es el montaje',
@@ -483,7 +488,9 @@ function pintarAjustes(){
   let h = caja('Reglas del negocio',
     campo('a_minPct','Margen mínimo','Por debajo de esto la app te avisa. Medido sobre el precio de venta', numInp('a_minPct', a.minPct, 0, 60, 1))
     + campo('a_fondoPct','Fondo de garantía','Nunca menos del 3 %', numInp('a_fondoPct', a.fondoPct, 3, 30, 1))
-    + campo('a_socioPct','Parte de la socia','El resto es tuyo', numInp('a_socioPct', a.socioPct, 0, 100, 5)),
+    + campo('a_socioPct','Parte de la socia','El resto es tuyo', numInp('a_socioPct', a.socioPct, 0, 100, 5))
+    + campo('a_garantiaMeses','Garantía que das','En meses, desde la puesta en marcha', numInp('a_garantiaMeses', a.garantiaMeses, 1, 120, 1))
+    + campo('a_validezDias','Validez de la cotización','En días. Pasado ese plazo hay que rehacerla', numInp('a_validezDias', a.validezDias, 1, 90, 1)),
     'El margen mínimo está medido sobre el <b>precio de venta</b>, que es como lo enseñaba la calculadora. Si lo querías sobre lo invertido, dímelo y lo cambio: son cifras distintas.');
 
   h += caja('Este teléfono',
@@ -563,6 +570,56 @@ function pintar(){
   else pintarAjustes();
   guardar();
 }
+
+/* ═══════════════ LA COTIZACIÓN DEL CLIENTE ═══════════════ */
+let cotActual = null;
+
+function abrirCot(t, aj){
+  cotActual = { t, aj };
+  $('cotTit').textContent = 'Cotización · ' + t.nombre;
+  $('cotCuerpo').innerHTML = htmlCot(datosCot(t, aj));
+  $('hojaCot').hidden = false;
+  document.body.style.overflow = 'hidden';
+  $('hojaCot').scrollTop = 0;
+}
+function cerrarCot(){ $('hojaCot').hidden = true; document.body.style.overflow = ''; cotActual = null; }
+
+async function compartirCot(){
+  if (!cotActual) return;
+  const url = location.origin + location.pathname + '#c=' + empaquetarCot(cotActual.t, cotActual.aj);
+  const d = datosCot(cotActual.t, cotActual.aj);
+  const texto = 'Cotización para ' + cotActual.t.nombre + ' · Light of Life Energy'
+    + '\n\nSistema de ' + co(d.kwInv) + ' kW con ' + co(Math.round(d.kWh*100)/100)
+    + ' kWh de batería y ' + d.npan + ' paneles, instalado: ' + din(d.precio)
+    + '\n\nAquí va el detalle completo:\n' + url;
+  if (navigator.share){
+    try { await navigator.share({ title:'Cotización · Light of Life Energy', text:texto }); return; } catch(e){}
+  }
+  try { await navigator.clipboard.writeText(texto);
+    alert('Cotización copiada. Pégala en WhatsApp y mándasela.'); }
+  catch(e){ prompt('Copia este enlace y mándaselo:', url); }
+}
+
+/* si la app se abre con una cotización dentro del enlace, se enseña y ya:
+   el cliente no ve la app, ve su documento */
+function mirarCotizacion(){
+  const h = location.hash || '';
+  if (!h.startsWith('#c=')) return false;
+  const p = desempaquetarCot(h.slice(3));
+  if (!p) return false;
+  history.replaceState(null, '', location.pathname);
+  document.querySelector('.top').hidden = true;
+  document.querySelector('.nav').hidden = true;
+  document.querySelector('main').hidden = true;
+  abrirCot(p.t, p.aj);
+  $('cotCerrar').hidden = true;
+  $('cotCompartir').hidden = true;
+  return true;
+}
+
+$('cotCerrar').addEventListener('click', cerrarCot);
+$('cotCompartir').addEventListener('click', compartirCot);
+$('cotImprimir').addEventListener('click', () => window.print());
 
 /* ═══════════════ MANDARLE EL TRABAJO AL INSTALADOR ═══════════════
    El trabajo viaja dentro del propio enlace, no hay servidor por medio.
@@ -741,6 +798,7 @@ document.addEventListener('click', ev => {
   const ir = ev.target.closest('[data-ir]');
   if (ir){ S.activo = ir.dataset.ir; pintar(); return; }
   if (ev.target.id === 'btnNuevo'){ nuevoTrabajo(); pintar(); window.scrollTo(0,0); return; }
+  if (ev.target.id === 'btnCot'){ abrirCot(activo(), S.ajustes); return; }
   if (ev.target.id === 'btnEnviar'){ enviarTrabajo(); return; }
   if (ev.target.id === 'btnBorrar'){
     const t = activo();
@@ -778,8 +836,10 @@ document.addEventListener('change', ev => {
 
 /* ═══════════════ arranque ═══════════════ */
 cargar();
-mirarEnlace();
-pintar();
+if (!mirarCotizacion()){
+  mirarEnlace();
+  pintar();
+}
 
 /* que funcione sin internet: solo se activa si la app está en su propia dirección */
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
