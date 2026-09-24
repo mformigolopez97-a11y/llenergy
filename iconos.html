@@ -1,0 +1,217 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cuatro iconos para LLEnergy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
+
+<style>
+:root{
+  --negro:#0A0B0D; --panel:#15181C; --panel2:#1D2127;
+  --linea:#282E36; --linea2:#1F242B;
+  --blanco:#EEF2F6; --gris:#8B96A5; --gris2:#5C6675;
+  --naranja:#FF8A3C; --verde:#2FD97F;
+}
+*{box-sizing:border-box}
+body{background:var(--negro); color:var(--blanco);
+  font-family:"IBM Plex Sans",system-ui,sans-serif; font-size:16px; line-height:1.55;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px; margin:0 auto; padding-inline:18px; padding-block:28px 60px}
+h1,h2,h3{font-family:"Archivo",system-ui,sans-serif; margin:0; text-wrap:balance}
+
+header{border-bottom:1px solid var(--linea); padding-bottom:20px; margin-bottom:26px}
+header h1{font-size:clamp(28px,7vw,40px); font-weight:800; letter-spacing:-.02em; line-height:1.05}
+header p{color:var(--gris); margin:12px 0 0; max-width:58ch}
+header p b{color:var(--blanco)}
+
+.op{background:var(--panel); border:1px solid var(--linea); border-radius:16px;
+  padding:20px 18px; margin-bottom:16px}
+.op.gana{border-color:var(--naranja)}
+.op-top{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+.op h2{font-size:23px; font-weight:700}
+.marca{font-family:"IBM Plex Mono",monospace; font-size:9.5px; font-weight:700;
+  letter-spacing:.1em; text-transform:uppercase; padding:4px 9px; border-radius:6px;
+  background:rgba(255,138,60,.14); color:var(--naranja); border:1px solid rgba(255,138,60,.3)}
+.op .idea{color:var(--gris); font-size:14.5px; margin:8px 0 16px; max-width:56ch}
+.op .idea b{color:var(--blanco)}
+
+.tallas{display:flex; align-items:flex-end; gap:20px; flex-wrap:wrap;
+  padding:16px; background:var(--negro); border-radius:12px; border:1px solid var(--linea2)}
+.t{text-align:center}
+.t svg{display:block; border-radius:23%; background:var(--negro)}
+.t span{display:block; font-family:"IBM Plex Mono",monospace; font-size:9.5px;
+  color:var(--gris2); letter-spacing:.09em; margin-top:8px; text-transform:uppercase}
+.t.real span{color:var(--verde)}
+
+.inicio{margin-top:14px; background:linear-gradient(160deg,#101418,#080A0C);
+  border:1px solid var(--linea2); border-radius:16px; padding:18px 14px 14px}
+.inicio .et{font-family:"IBM Plex Mono",monospace; font-size:9px; letter-spacing:.11em;
+  text-transform:uppercase; color:var(--gris2); margin-bottom:14px; text-align:center}
+.rejilla{display:grid; grid-template-columns:repeat(4,1fr); gap:16px 8px; max-width:320px; margin:0 auto}
+.app{text-align:center}
+.app .ic{width:52px; height:52px; border-radius:23%; margin:0 auto;
+  background:#222830; border:1px solid var(--linea)}
+.app .ic svg{display:block; border-radius:23%; background:var(--negro)}
+.app .nm{font-size:10.5px; color:#C7CFD8; margin-top:6px; line-height:1.25; white-space:nowrap}
+.app.otro .nm{color:var(--gris2)}
+
+.lockup{margin-top:14px; display:flex; align-items:center; gap:11px;
+  background:var(--negro); border:1px solid var(--linea2); border-radius:12px; padding:15px 16px}
+.lockup .n{font-family:"Archivo",sans-serif; font-size:24px; font-weight:800; letter-spacing:-.02em}
+.lockup .n span{color:var(--naranja)}
+
+.veredicto{background:var(--panel); border:1px solid var(--linea);
+  border-radius:16px; padding:20px; margin-top:26px}
+.veredicto h3{font-size:21px; color:var(--naranja); font-weight:700}
+.veredicto p{margin:9px 0 0; color:var(--gris); font-size:15px}
+.veredicto p b{color:var(--blanco)}
+footer{margin-top:30px; padding-top:16px; border-top:1px solid var(--linea);
+  color:var(--gris2); font-size:13.5px}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="A" viewBox="0 0 100 100">
+    <circle cx="50" cy="44" r="17" fill="#FF8A3C"/>
+    <g stroke="#FF8A3C" stroke-width="6" stroke-linecap="round">
+      <path d="M50 12v8M22.2 44h-8M85.8 44h-8M28.6 22.6l5.7 5.7M71.4 22.6l-5.7 5.7"/></g>
+    <path d="M50 92c0-14 10-24 24-24 0 14-10 24-24 24z" fill="#2FD97F"/>
+    <path d="M50 92c0-14-10-24-24-24 0 14 10 24 24 24z" fill="#2FD97F" opacity=".55"/>
+  </symbol>
+  <symbol id="B" viewBox="0 0 100 100">
+    <circle cx="50" cy="58" r="21" fill="#FF8A3C"/>
+    <g stroke="#FF8A3C" stroke-width="6.5" stroke-linecap="round">
+      <path d="M50 16v9M18 40l6.5 6.5M82 40l-6.5 6.5"/></g>
+    <rect x="12" y="62" width="76" height="7" rx="3.5" fill="#0A0B0D"/>
+    <rect x="12" y="73" width="76" height="7" rx="3.5" fill="#2FD97F"/>
+    <rect x="26" y="84" width="48" height="7" rx="3.5" fill="#2FD97F" opacity=".5"/>
+  </symbol>
+  <symbol id="C" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="30" fill="#FF8A3C"/>
+    <rect x="36" y="30" width="7" height="34" rx="3.5" fill="#0A0B0D"/>
+    <rect x="36" y="57" width="18" height="7" rx="3.5" fill="#0A0B0D"/>
+    <rect x="57" y="30" width="7" height="34" rx="3.5" fill="#0A0B0D"/>
+    <rect x="57" y="57" width="16" height="7" rx="3.5" fill="#0A0B0D"/>
+    <g stroke="#2FD97F" stroke-width="6" stroke-linecap="round">
+      <path d="M50 6v7M50 87v7M6 50h7M87 50h7"/></g>
+  </symbol>
+  <symbol id="D" viewBox="0 0 100 100">
+    <rect x="18" y="18" width="64" height="64" rx="9" fill="none" stroke="#FF8A3C" stroke-width="7"/>
+    <g stroke="#FF8A3C" stroke-width="5" stroke-linecap="round" opacity=".45">
+      <path d="M50 22v56M22 50h56"/></g>
+    <path d="M32 66 L50 34 L68 66" fill="none" stroke="#2FD97F" stroke-width="8"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+</svg>
+
+<div class="wrap">
+
+<header>
+  <h1>Cuatro iconos para LLEnergy</h1>
+  <p>Un icono no se juzga en grande: se juzga <b>al tamaño en que lo vas a ver</b>, y entre
+  los demás iconos de tu teléfono. Por eso cada uno va en tres tamaños y metido en una
+  pantalla de inicio de mentira. <b>Fíjate en el de 52 px</b> — ese es el de verdad.</p>
+</header>
+
+<div class="op" id="op-A">
+  <div class="op-top"><h2>A · Sol y hoja</h2></div>
+  <p class="idea">Sol naranja arriba, dos hojas verdes abajo. Dice <b>solar</b> y <b>renovable</b>
+  sin que haya que explicar nada. Es la apuesta segura: nadie se confunde.</p>
+  <div class="tallas">
+    <div class="t"><svg width="112" height="112"><use href="#A"/></svg><span>112 px</span></div>
+    <div class="t"><svg width="72" height="72"><use href="#A"/></svg><span>72 px</span></div>
+    <div class="t real"><svg width="52" height="52"><use href="#A"/></svg><span>52 px · el real</span></div>
+  </div>
+  <div class="inicio">
+    <div class="et">Así se ve en tu pantalla de inicio</div>
+    <div class="rejilla">
+      <div class="app otro"><div class="ic"></div><div class="nm">Ajustes</div></div>
+      <div class="app"><div class="ic"><svg width="52" height="52"><use href="#A"/></svg></div><div class="nm">LLEnergy</div></div>
+      <div class="app otro"><div class="ic"></div><div class="nm">Cámara</div></div>
+      <div class="app otro"><div class="ic"></div><div class="nm">WhatsApp</div></div>
+    </div>
+  </div>
+  <div class="lockup"><svg width="30" height="30" viewBox="0 0 100 100"><use href="#A"/></svg>
+    <div class="n">LL<span>Energy</span></div></div>
+</div>
+
+<div class="op gana" id="op-B">
+  <div class="op-top"><h2>B · Amanecer</h2><span class="marca">Elegida</span></div>
+  <p class="idea">El sol saliendo por encima de dos líneas verdes. Va con el nombre:
+  <b>Light of Life</b> es luz que sale. Es el que menos se parece a lo que hace todo el mundo
+  y el que mejor aguanta en pequeño, porque son cuatro formas gordas y nada más.</p>
+  <div class="tallas">
+    <div class="t"><svg width="112" height="112"><use href="#B"/></svg><span>112 px</span></div>
+    <div class="t"><svg width="72" height="72"><use href="#B"/></svg><span>72 px</span></div>
+    <div class="t real"><svg width="52" height="52"><use href="#B"/></svg><span>52 px · el real</span></div>
+  </div>
+  <div class="inicio">
+    <div class="et">Así se ve en tu pantalla de inicio</div>
+    <div class="rejilla">
+      <div class="app otro"><div class="ic"></div><div class="nm">Ajustes</div></div>
+      <div class="app"><div class="ic"><svg width="52" height="52"><use href="#B"/></svg></div><div class="nm">LLEnergy</div></div>
+      <div class="app otro"><div class="ic"></div><div class="nm">Cámara</div></div>
+      <div class="app otro"><div class="ic"></div><div class="nm">WhatsApp</div></div>
+    </div>
+  </div>
+  <div class="lockup"><svg width="30" height="30" viewBox="0 0 100 100"><use href="#B"/></svg>
+    <div class="n">LL<span>Energy</span></div></div>
+</div>
+
+<div class="op" id="op-C">
+  <div class="op-top"><h2>C · Sol partido en LL</h2></div>
+  <p class="idea">El disco naranja con las dos <b>L</b> recortadas dentro. Es el único que
+  lleva tu nombre metido en el dibujo. El pero: en pequeño las dos L se cierran y se leen
+  como una mancha.</p>
+  <div class="tallas">
+    <div class="t"><svg width="112" height="112"><use href="#C"/></svg><span>112 px</span></div>
+    <div class="t"><svg width="72" height="72"><use href="#C"/></svg><span>72 px</span></div>
+    <div class="t real"><svg width="52" height="52"><use href="#C"/></svg><span>52 px · el real</span></div>
+  </div>
+  <div class="inicio">
+    <div class="et">Así se ve en tu pantalla de inicio</div>
+    <div class="rejilla">
+      <div class="app otro"><div class="ic"></div><div class="nm">Ajustes</div></div>
+      <div class="app"><div class="ic"><svg width="52" height="52"><use href="#C"/></svg></div><div class="nm">LLEnergy</div></div>
+      <div class="app otro"><div class="ic"></div><div class="nm">Cámara</div></div>
+      <div class="app otro"><div class="ic"></div><div class="nm">WhatsApp</div></div>
+    </div>
+  </div>
+  <div class="lockup"><svg width="30" height="30" viewBox="0 0 100 100"><use href="#C"/></svg>
+    <div class="n">LL<span>Energy</span></div></div>
+</div>
+
+<div class="op" id="op-D">
+  <div class="op-top"><h2>D · Célula solar</h2></div>
+  <p class="idea">Un panel visto de frente con un rayo verde dentro. Claro y muy legible,
+  pero más frío: parece icono de <b>herramienta</b>, no de marca.</p>
+  <div class="tallas">
+    <div class="t"><svg width="112" height="112"><use href="#D"/></svg><span>112 px</span></div>
+    <div class="t"><svg width="72" height="72"><use href="#D"/></svg><span>72 px</span></div>
+    <div class="t real"><svg width="52" height="52"><use href="#D"/></svg><span>52 px · el real</span></div>
+  </div>
+  <div class="inicio">
+    <div class="et">Así se ve en tu pantalla de inicio</div>
+    <div class="rejilla">
+      <div class="app otro"><div class="ic"></div><div class="nm">Ajustes</div></div>
+      <div class="app"><div class="ic"><svg width="52" height="52"><use href="#D"/></svg></div><div class="nm">LLEnergy</div></div>
+      <div class="app otro"><div class="ic"></div><div class="nm">Cámara</div></div>
+      <div class="app otro"><div class="ic"></div><div class="nm">WhatsApp</div></div>
+    </div>
+  </div>
+  <div class="lockup"><svg width="30" height="30" viewBox="0 0 100 100"><use href="#D"/></svg>
+    <div class="n">LL<span>Energy</span></div></div>
+</div>
+
+<div class="veredicto">
+  <h3>Elegida: la B</h3>
+  <p>Es la que mejor se sostiene a 52 px, la que menos se repite por ahí, y la única que
+  cuenta el nombre en vez de solo decir «esto va de sol». <b>La A es la apuesta segura</b>:
+  todo el mundo la entiende al instante y nunca va a quedar mal.</p>
+  <p>Dime la letra y la dejo puesta en el icono del teléfono y en la cabecera de la app.
+  Si quieres mezclar algo de dos, también se puede.</p>
+</div>
+
+<footer>Light of Life Energy · LLEnergy · los iconos están dibujados con formas, no con fotos,
+para que se vean nítidos a cualquier tamaño.</footer>
+
+</div>
