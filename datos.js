@@ -35,8 +35,10 @@ export const BATS={
  'ecoworthy-314':{n:'ECO-WORTHY PowerMega 314 · 16,07 kWh · 51,2 V',v:51.2,ah:314,ides:200,icar:200,dod:0.8,ok:false,
    ficha:'https://www.eco-worthy.com/products/eco-worthy-48v-314ah-lifepo4-battery-solar-battery-backup-for-home-wall-mount',
    nota:'La grande de pared: 314 Ah, 16,07 kWh, BMS de 200 A con balanceo activo, hasta 15 en paralelo. Alternativa de fabricante identificable y con garantía escrita frente a los todo-en-uno sin marca. Datos de la ficha comercial.'},
- 'gen-24-100':{n:'Genérica 25,6 V · 100 Ah (2,56 kWh)',v:25.6,ah:100,ides:100,icar:50,ok:false,ficha:'',
-   nota:'Plantilla de 24 V. Ojo: <b>no sirve para un inversor de 48 V</b>. Solo para equipos pequeños.'},
+ 'gen-24-100':{n:'Batería inteligente 25,6 V · 2,56 kWh (100 Ah)',v:25.6,ah:100,ides:100,icar:50,ok:false,ficha:'',
+   nota:'La de «2,5 kWh». Es de <b>8 celdas</b>, así que va con inversores de <b>24 V</b> (como el MUST PV33-3024 TLV), <b>nunca con uno de 48 V</b>. Las que llaman «inteligentes» traen pantalla o bluetooth para ver el estado, pero eso no cambia los amperios: <b>los del BMS hay que leerlos en la etiqueta</b>. He puesto 100 A de descarga y 50 A de carga como plantilla, no son dato de fabricante.'},
+ 'gen-24-200':{n:'Batería inteligente 25,6 V · 5,12 kWh (200 Ah)',v:25.6,ah:200,ides:200,icar:100,ok:false,ficha:'',
+   nota:'La misma de 8 celdas pero del doble. Con un inversor de 3 kW a 24 V hace falta este tamaño o dos de 100 Ah en paralelo, porque una sola de 100 Ah no da la corriente. Amperios de plantilla: confírmalos en la etiqueta.'},
 };
 
 export const MODELOS={
@@ -63,6 +65,27 @@ export const MODELOS={
  'growatt-6000t':{n:'Growatt SPF 6000T · 6 kW split-phase',kw:6,vnom:48,icar:80,vflot:0,vtope:0,pbat:6000,vac:'240',vmax:450,vmin:120,vmpmax:430,nmppt:2,impp:18,ok:false,
    ficha:'https://us.growatt.com/products/spf-3500-5000-us',
    nota:'Salida split-phase 120/240 V, que encaja bien con el bifásico cubano. Confirma en la etiqueta.'},
+ /* ---- MUST de fase dividida (serie PV3300 TLV) ----
+    Datos de la ficha oficial de MUST, hoja "Low Frequency Split Phase
+    Solar Inverter · PV3300 TLV Series (1KW-6KW)". Son de baja frecuencia,
+    con transformador: arrancan motores mucho mejor que los de alta. */
+ 'must-tlv-3024':{n:'MUST PV33-3024 TLV · 3 kW · bifásico · batería 24 V',kw:3,vnom:24,icar:80,
+   vflot:27,vtope:0,vac:'120',vmax:145,vmin:30,vmpmax:130,nmppt:1,impp:25,ok:true,
+   ficha:'https://www.mustpower.com/product/pv3300-tlv-3kw-6kw/',
+   nota:'<b>Ficha oficial de MUST.</b> Sale en <b>fase dividida</b> (HOT1 + neutro + HOT2), o sea 110/120 V y 220/240 V a la vez: es la topología de la red cubana. Frecuencia ajustable a 60 Hz. <b>Ojo con los paneles: solo aguanta 145 V en circuito abierto</b> y el MPPT regula de 30 a 130 V, así que con paneles de 46 V caben <b>dos en serie, no más</b>. Campo solar máximo 2.500 W, carga 80 A. Arranque de motor 9.000 VA, que es mucho para 3 kW: es de baja frecuencia, con transformador. La corriente máxima de entrada FV no viene en la ficha; he puesto 25 A por el campo máximo, compruébalo.'},
+ 'must-tlv-3048':{n:'MUST PV33-3048 TLV · 3 kW · bifásico · batería 48 V',kw:3,vnom:48,icar:80,
+   vflot:54,vtope:0,vac:'120',vmax:145,vmin:60,vmpmax:130,nmppt:1,impp:25,ok:true,
+   ficha:'https://www.mustpower.com/product/pv3300-tlv-3kw-6kw/',
+   nota:'El mismo de 3 kW pero con batería de <b>48 V</b> en vez de 24 V. Con 48 V el inversor tira la mitad de corriente de la batería, así que el BMS sufre mucho menos. Mismos límites de paneles: 145 V máximo y MPPT de 60 a 130 V.'},
+ 'must-tlv-5048':{n:'MUST PV33-5048 TLV · 5 kW · bifásico · batería 48 V',kw:5,vnom:48,icar:80,
+   vflot:54,vtope:0,vac:'120',vmax:145,vmin:60,vmpmax:130,nmppt:1,impp:30,ok:true,
+   ficha:'https://www.mustpower.com/product/pv3300-tlv-3kw-6kw/',
+   nota:'Ficha oficial. Campo solar 5.000 W, arranque 15.000 VA. <b>Mismo tope de 145 V en los paneles</b>: dos en serie con paneles de 46 V.'},
+ 'must-tlv-1024':{n:'MUST PV33-1024 TLV · 1 kW · bifásico · batería 24 V',kw:1,vnom:24,icar:60,
+   vflot:27,vtope:0,vac:'120',vmax:100,vmin:16,vmpmax:95,nmppt:1,impp:15,ok:true,
+   ficha:'https://www.mustpower.com/product/pv3300-tlv-3kw-6kw/',
+   nota:'El pequeño de la serie. <b>Solo 100 V en circuito abierto</b> y MPPT de 16 a 95 V: con paneles de 46 V cabe <b>uno solo en serie</b>. Campo solar 1.250 W. Para una casa muy básica o un cuarto.'},
+
  /* ---- PowMr ---- */
  'powmr-62k-450':{n:'PowMr POW-HVM6.2K · 6,2 kW · ventana 60–450 V',kw:6.2,vnom:48,icar:120,vflot:0,vtope:0,pbat:6200,
    vac:'230',vmax:450,vmin:60,vmpmax:430,nmppt:1,impp:27,ok:false,
