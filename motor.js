@@ -317,8 +317,10 @@ export function protecciones(d, inv){
 
   add('Batería','brkDC','Breaker CC de batería', d.brkDC + ' A · 125 V CC',
     'MCCB de corriente continua, 2 polos. El inversor tira ' + Math.round(d.Ibat) + ' A a plena carga');
-  add('Batería','fusT','Fusible Clase T + portafusible', d.fusT + ' A · 125 V CC',
-    'Poder de corte ≥ 20 kA. Va pegado al borne positivo de la batería. <b>Ningún inversor lo trae</b>');
+  add('Batería','fusT','Corte de cortocircuito de batería', d.fusT + ' A · ≥ 10 kA en CC',
+    'Va pegado al borne positivo. <b>Lo que importa no son los amperios, es el poder de corte en corriente '
+    + 'continua</b>: pide <b>≥ 10 kA a ' + Math.ceil(d.Vbat * 1.4 / 10) * 10 + ' V CC</b>. '
+    + 'El Clase T es el de siempre, pero en Cuba no se encuentra: abajo tienes los que sí sirven');
   add('Batería','cabBat','Cable de batería', d.cabBat,
     'Dos tramos, positivo y negativo, con terminales de ojal crimpados');
 
@@ -346,6 +348,43 @@ export function protecciones(d, inv){
   add('Tierra','varilla','Varilla y abrazadera', '1 juego', 'Varilla de cobre, abrazadera y barra equipotencial');
 
   return L;
+}
+
+/* ═══════════════ 8 ter · QUÉ PONER SI NO HAY FUSIBLE CLASE T ═══════════════
+   En Cuba el Clase T no se consigue. Lo que hay que buscar no es la marca
+   ni el nombre: es el PODER DE CORTE en corriente continua. Un fusible o
+   breaker de coche o de casa apaga bien 230 V alternos, donde la corriente
+   pasa por cero cien veces por segundo y el arco se apaga solo. En continua
+   la corriente nunca pasa por cero: el arco sigue ardiendo hasta que algo
+   lo corta de verdad. Por eso el número que hay que exigir es en CC. */
+export function sustitutosFusible(d){
+  const kA = '≥ 10 kA';
+  const V = Math.ceil(d.Vbat * 1.4 / 10) * 10;
+  return [
+    { n:'Breaker CC de varios polos, en serie', bien:true,
+      v:d.brkDC + ' A · ' + V + ' V CC',
+      t:'<b>La salida más realista en Cuba.</b> Los breakers de continua de 2, 3 o 4 polos se cablean '
+        + 'con <b>todos los polos en serie dentro del mismo circuito</b>: cada polo parte el arco y entre '
+        + 'todos sí lo apagan. El de <b>125 A y 3 polos</b> que te ofrecen a 35 USD es exactamente eso. '
+        + 'Pide que te confirmen el <b>poder de corte en CC</b> y que se puede cablear en serie.' },
+    { n:'Fusible MRBF de borne', bien:true,
+      v:d.fusT + ' A · 10 kA',
+      t:'Se atornilla directo al borne positivo de la batería. Pensado para barcos y para litio, con poder '
+        + 'de corte alto en continua hasta 58 V. Si aparece uno, es el sustituto más limpio del Clase T.' },
+    { n:'Fusible NH (cuchilla industrial) con dato de CC', bien:true,
+      v:d.fusT + ' A · ' + kA,
+      t:'Los NH00 o NH1 con su base son comunes en material industrial y cortan muchísimo. '
+        + '<b>Ojo:</b> casi todos vienen con el dato en alterna. Sirve solo si la ficha dice también '
+        + 'el poder de corte <b>en corriente continua</b> a ' + V + ' V.' },
+    { n:'Fusible ANL o MEGA', bien:false,
+      v:d.fusT + ' A · 2–6 kA',
+      t:'Baratos y fáciles de encontrar, pero <b>cortan mucho menos</b>. Valen para un sistema pequeño; '
+        + 'con un banco de litio grande se pueden quedar cortos y abrirse hechos un arco.' },
+    { n:'Breaker normal de casa', bien:false,
+      v:'NO', color:'bad',
+      t:'<b>Esto no.</b> Un magnetotérmico de alterna en un circuito de continua no apaga el arco: '
+        + 'lo mantiene. Es de los errores que terminan en incendio.' },
+  ];
 }
 
 /* ═══════════════ 8 bis · LO QUE EL INVERSOR YA LLEVA DENTRO ═══════════════
@@ -483,4 +522,52 @@ export function negocioVenta(articulos, fondoPct, minPct, socioPct){
     ventaMin,
     paraMi: ganancia * (100 - (+socioPct || 0)) / 100,
     paraSocia: ganancia * (+socioPct || 0) / 100 };
+}
+
+/* ═══════════════ 12 · EL NEGOCIO ENTERO ═══════════════
+   Cruza todos los trabajos para responder a lo que de verdad importa:
+   cuánto capital está atrapado, cuánto falta por cobrar y cuánto se ha
+   ganado. Un trabajo suelto no contesta a eso. */
+export function panel(trabajos, aj){
+  const A = trabajos || [];
+  const minPct = +aj.minPct || 0, fondoPct = +aj.fondoPct || 0, socioPct = +aj.socioPct || 0;
+
+  let coste = 0, vendido = 0, cobrado = 0, porCobrar = 0, ganancia = 0, fondo = 0;
+  let atrapado = 0;   // lo que ya pusiste y todavía no te han devuelto
+  const estados = { visita:0, cotizado:0, aceptado:0, montado:0 };
+
+  A.forEach(t => {
+    estados[t.estado] = (estados[t.estado] || 0) + 1;
+    const esVenta = (t.tipo || 'montaje') === 'venta';
+
+    let c, v;
+    if (esVenta){
+      const r = negocioVenta(t.articulos, fondoPct, minPct, socioPct);
+      c = r.coste; v = r.venta; ganancia += r.ganancia; fondo += r.fondo;
+    } else {
+      const m = t.dinero || {};
+      const r = negocio({ kit:+m.kit||0, npan:+(t.sistema||{}).npan||0, ppan:+m.ppan||0,
+        prot:+m.prot||0, cab:+m.cab||0, estr:+m.estr||0, obra:+m.obra||0, trans:+m.trans||0,
+        precio:+m.precio||0, fondoPct, minPct, socioPct });
+      c = r.coste; v = r.precio !== undefined ? +m.precio||0 : 0; v = +m.precio||0;
+      ganancia += r.ganancia; fondo += r.fondo;
+    }
+
+    const rc = resumenCobros(t.cobros, v, 0);
+    coste += c; vendido += v; cobrado += rc.cobrado; porCobrar += rc.falta;
+
+    // el capital sigue fuera mientras el trabajo no esté cobrado del todo
+    if (rc.falta > 0) atrapado += Math.max(0, c - rc.cobrado);
+  });
+
+  const capital = +aj.capital || 0;
+  const libre = Math.max(0, capital - atrapado);
+  const costeMedio = A.length ? coste / A.length : 0;
+  const cabenMas = costeMedio > 0 ? Math.floor(libre / costeMedio) : 0;
+
+  return { n:A.length, estados, coste, vendido, cobrado, porCobrar,
+    ganancia, fondo, atrapado, capital, libre, costeMedio, cabenMas,
+    paraMi: ganancia * (100 - socioPct) / 100,
+    paraSocia: ganancia * socioPct / 100,
+    margen: vendido > 0 ? ganancia / vendido * 100 : 0 };
 }

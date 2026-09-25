@@ -10,7 +10,7 @@ import { MODELOS, BATS, PRECIOS } from './datos.js';
 import { datosCot, htmlCot, empaquetarCot, desempaquetarCot } from './cotizacion.js';
 
 const LS = 'llenergy-v1';
-const VERSION_APP = 'v18';   // sube con cada publicación, junto a la de sw.js
+const VERSION_APP = 'v20';   // sube con cada publicación, junto a la de sw.js
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
@@ -144,9 +144,57 @@ function pagoChip(t){
   return '<span class="estado ' + cl + '" style="margin-left:5px">' + tx + '</span>';
 }
 
+function pintarPanel(){
+  if (S.rol === 'campo') return '';
+  const a = S.ajustes;
+  const p = M.panel(S.trabajos, a);
+  if (!p.vendido && !p.coste) return '';
+
+  const sinCapital = !p.capital;
+  const apretado = p.capital > 0 && p.libre < p.costeMedio;
+
+  let h = '<div class="kpi"><div class="k">Ganancia de todo lo abierto</div>'
+    + '<div class="v ' + (p.margen >= num(a.minPct) ? 'ok' : 'bad') + '">' + din(p.ganancia) + '</div>'
+    + '<div class="s">' + p.margen.toFixed(1).replace('.',',') + ' % sobre ' + din(p.vendido)
+    + ' vendidos · ' + p.n + ' trabajo' + (p.n===1?'':'s') + ' · fondo de garantía ' + din(p.fondo) + '</div></div>';
+
+  h += '<div class="kpi dos"><div><div class="k">Ya entró</div>'
+    + '<div class="v ok">' + din(p.cobrado) + '</div></div>'
+    + '<div><div class="k">Falta por cobrar</div>'
+    + '<div class="v ' + (p.porCobrar ? 'warn' : '') + '">' + din(p.porCobrar) + '</div></div></div>';
+
+  let hc = fila('Capital que hay', sinCapital ? '—' : din(p.capital),
+      sinCapital ? 'Ponlo en <b>Ajustes → Capital</b> y te digo cuántos trabajos caben a la vez'
+                 : 'El que puso la socia', sinCapital ? 'warn' : '')
+    + fila('Atrapado en trabajos sin cobrar', din(p.atrapado),
+        'Lo que ya pusiste de tu bolsillo y todavía no ha vuelto', p.atrapado ? 'warn' : '')
+    + fila('Libre para el próximo', din(p.libre), 'Con esto es con lo que puedes comprar ahora',
+        p.libre > 0 ? 'ok' : 'bad');
+
+  if (!sinCapital)
+    hc += fila('Cuántos trabajos más caben', p.cabenMas || 'ninguno',
+      p.cabenMas
+        ? 'A un coste medio de ' + din(p.costeMedio) + ' por sistema'
+        : '<b>El capital libre no llega para otro sistema.</b> Hasta que no cobres uno de los abiertos, no puedes comprar más',
+      p.cabenMas ? 'ok' : 'bad');
+
+  let h2 = caja('Cómo va el negocio', hc,
+    apretado ? '<b>Ojo:</b> tienes casi todo el capital metido en trabajos sin cobrar. '
+      + 'Cobrar lo abierto vale más ahora mismo que vender uno nuevo.' : '');
+
+  h2 += caja('Reparto de lo ganado',
+    fila('Para ti', din(p.paraMi), (100 - num(a.socioPct)) + ' % de la ganancia', 'ok')
+    + fila('Para la socia', din(p.paraSocia), num(a.socioPct) + ' % · solo de lo que se haya ganado')
+    + fila('Al fondo de garantía', din(p.fondo),
+        'No es ganancia: es lo que cubre las averías. Tu proveedor no cubre nada después del montaje', 'info'));
+
+  return h + h2;
+}
+
 function pintarTrabajos(){
   const ETIQ = { visita:'Visita', cotizado:'Cotizado', aceptado:'Aceptado', montado:'Montado' };
-  let h = S.trabajos.map(t => {
+  let h = pintarPanel();
+  h += S.trabajos.map(t => {
     const e = M.dimensionar(sistemaDe(t));
     return '<button type="button" class="trab" data-ir="' + t.id + '"'
       + (t.id === S.activo ? ' aria-current="true"' : '') + '>'
@@ -366,6 +414,19 @@ function pintarDiseno(){
   h += caja('Protecciones que hay que montar', prot,
     'Calculado al 125 % de la corriente de trabajo. Si un valor cae entre dos tamaños comerciales, se coge <b>el inmediatamente superior</b>.'
     + (porMirar ? ' · <b>Las marcadas en ámbar</b> son las que algunos inversores traen de fábrica y otros no: míralo en el equipo antes de comprarlas.' : ''));
+
+  /* qué poner si no hay Clase T */
+  h += caja('El corte de la batería, sin Clase T',
+    '<div class="titular info"><b>Busca el poder de corte, no el nombre</b>'
+    + '<small>En corriente continua la corriente nunca pasa por cero, así que el arco no se apaga solo. '
+    + 'Por eso lo que hay que exigir es <b>≥ 10 kA de poder de corte en CC</b> a la tensión de tu batería. '
+    + 'Si la ficha solo da el dato en alterna, <b>no vale</b>.</small></div>'
+    + M.sustitutosFusible(d).map(s => fila(
+        '<span class="pt ' + (s.bien ? 'ok' : (s.color === 'bad' ? 'bad' : 'warn')) + '"></span>' + s.n,
+        s.v, s.t, s.bien ? 'ok' : (s.color === 'bad' ? 'bad' : 'warn'))).join(''),
+    'El BMS de la batería también corta por cortocircuito, y en un equipo bueno corta rápido. '
+    + 'Pero <b>el fusible protege el tramo entre el borne y el BMS</b>, y protege también el día que el '
+    + 'BMS falle. Por eso va igual.');
 
   /* cuánto cuestan estas protecciones en Cuba */
   {
@@ -602,7 +663,9 @@ function pintarDinero(){
   /* --- capital --- */
   const cabenOps = num(a.capital) > 0 && n.coste > 0 ? Math.floor(num(a.capital) / n.coste) : 0;
   h += caja('Capital',
-    campo('a_capital','Capital disponible','Lo que puso la socia, en la misma moneda que los costes', numInp('a_capital', a.capital, 0, 200000, 100))
+    fila('Capital disponible', num(a.capital) ? din(num(a.capital)) : 'sin poner',
+        'Se pone en <b>Ajustes</b>, porque es del negocio entero y no de este trabajo',
+        num(a.capital) ? '' : 'warn')
     + fila('Operaciones abiertas que caben', cabenOps || '—',
         cabenOps ? 'Con ' + din(num(a.capital)) + ' y un coste de ' + din(n.coste) + ' por sistema'
                  : 'El capital no llega ni para un sistema completo', cabenOps ? 'ok' : 'bad')
@@ -739,7 +802,8 @@ function pintarAjustes(){
     + campo('a_fondoPct','Fondo de garantía','Nunca menos del 3 %', numInp('a_fondoPct', a.fondoPct, 3, 30, 1))
     + campo('a_socioPct','Parte de la socia','El resto es tuyo', numInp('a_socioPct', a.socioPct, 0, 100, 5))
     + campo('a_garantiaMeses','Garantía que das','En meses, desde la puesta en marcha', numInp('a_garantiaMeses', a.garantiaMeses, 1, 120, 1))
-    + campo('a_validezDias','Validez de la cotización','En días. Pasado ese plazo hay que rehacerla', numInp('a_validezDias', a.validezDias, 1, 90, 1)),
+    + campo('a_validezDias','Validez de la cotización','En días. Pasado ese plazo hay que rehacerla', numInp('a_validezDias', a.validezDias, 1, 90, 1))
+    + campo('a_capital','Capital disponible','Lo que puso la socia. Con esto se calcula cuántos trabajos caben a la vez', numInp('a_capital', a.capital, 0, 200000, 100)),
     'El margen mínimo está medido sobre el <b>precio de venta</b>, que es como lo enseñaba la calculadora. Si lo querías sobre lo invertido, dímelo y lo cambio: son cifras distintas.');
 
   h += caja('Este teléfono',
