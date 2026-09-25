@@ -128,3 +128,42 @@ export const MODELOS={
    ficha:'https://www.eco-worthy.com/products/eco-worthy-10000w-solar-off-grid-inverter-charger-48v-dc-to-240v-ac-split-phase-power-inverter',
    nota:'Dos MPPT de 5.500 W cada uno (11 kW de paneles en total) y hasta 200 A de carga de batería. Salida bifásica 120/240 V. Datos de la ficha comercial.'},
 };
+
+/* ═══════════════════════════════════════════════════════════════
+   PRECIOS DE REFERENCIA EN CUBA
+   Pasados por Marcos el 2026-09-25, de proveedor y de tienda.
+   Son precios de COMPRA, no de venta.
+
+   No son eternos: en Cuba se mueven. Por eso cada uno lleva fecha,
+   y la app los usa solo como punto de partida editable.
+   ═══════════════════════════════════════════════════════════════ */
+export const PRECIOS = {
+  fecha: '25 de septiembre de 2026',
+  cambio: 705,          // CUP por 1 USD ese día
+  piezas: {
+    varillaTierra:   { n:'Varilla de tierra',                  usd:60, de:'Infinity Energy' },
+    brkDC125:        { n:'Breaker CC 125 A · 3 polos',         usd:35, de:'Infinity Energy' },
+    cajaBreakers:    { n:'Caja de breakers · 12 posiciones',   usd:30, de:'Infinity Energy' },
+    protVoltaje:     { n:'Protector de voltaje digital',       usd:30, de:'Infinity Energy' },
+    extintor:        { n:'Heat Aerosol · extintor de tablero', usd:30, de:'Infinity Energy' },
+    brkDC63:         { n:'Breaker CC 63 A',                    usd:25, de:'Infinity Energy' },
+    spd:             { n:'SPD · sobretensiones, riel DIN',     usd:25, de:'Infinity Energy' },
+    contactor:       { n:'Contactor modular 63 A · 4 polos',   usd:60, de:'Infinity Energy' },
+    terminal35:      { n:'Terminal de batería SC-35',          usd:2,  de:'AGH Holguín' },
+    terminal50:      { n:'Terminal de batería SC-50',          usd:3,  de:'AGH Holguín' },
+    derrameAgua:     { n:'Derrame de agua para panel',         usd:2,  de:'AGH Holguín' },
+  },
+  /* los cables FV ya vienen con sus MC4 puestos */
+  cableFV: [[1,20],[3,38],[6,50],[10,85]],   // metros, USD · AGH Holguín
+  packs: {
+    proteccion: { n:'Pack de protección eléctrica', usd:125, de:'Infinity Energy',
+      lleva:['SPD','Breaker CC 63 A','Heat Aerosol','Breaker CC 125 A 3P','Protector de voltaje 120 V 63 A'],
+      falta:['Diferencial de 30 mA','Fusible Clase T','Varilla de tierra','Caja de breakers'] },
+    brequera36: { n:'Brequera llena cableada · inversor de 3 a 6 kW', usd:200, de:'AGH Holguín',
+      lleva:['15 piezas montadas y cableadas','PV IN','DC OUT','BAT','INPUT AC','OUTPUT AC','2 protectores de voltaje'],
+      falta:['Por confirmar: SPD, diferencial de 30 mA y fusible Clase T'] },
+    brequera1012: { n:'Brequera llena · inversor de 10 a 12 kW', usd:322, de:'AGH Holguín',
+      lleva:['Montada y cableada','Modificable según el sistema'],
+      falta:['Por confirmar: SPD, diferencial de 30 mA y fusible Clase T'] },
+  },
+};

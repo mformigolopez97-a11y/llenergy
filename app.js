@@ -6,11 +6,11 @@
    ═══════════════════════════════════════════════════════════════════════ */
 
 import * as M from './motor.js';
-import { MODELOS, BATS } from './datos.js';
+import { MODELOS, BATS, PRECIOS } from './datos.js';
 import { datosCot, htmlCot, empaquetarCot, desempaquetarCot } from './cotizacion.js';
 
 const LS = 'llenergy-v1';
-const VERSION_APP = 'v17';   // sube con cada publicación, junto a la de sw.js
+const VERSION_APP = 'v18';   // sube con cada publicación, junto a la de sw.js
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
@@ -37,7 +37,7 @@ const DINERO_EJEMPLO = { kit:2500, ppan:180, prot:600, cab:180, estr:200, obra:3
 const VISITA = { consumo:'', tipoTecho:'plano', orientacion:'sur', sombras:'no',
   neutro:'sin revisar', equiposCasa:'', pide:'', puede:'', extra:'', notas:'' };
 
-const AJUSTES = { usdCup:0, cambioFecha:'', minPct:18, socioPct:30, fondoPct:3, capital:0,
+const AJUSTES = { usdCup:705, cambioFecha:'', minPct:18, socioPct:30, fondoPct:3, capital:0,
   claveHash:'',      // de la clave solo se guarda su huella, nunca la clave
   dispositivo:'',    // de quién es este teléfono, para saber quién intentó entrar
   garantiaMeses:12, validezDias:15 };
@@ -366,6 +366,51 @@ function pintarDiseno(){
   h += caja('Protecciones que hay que montar', prot,
     'Calculado al 125 % de la corriente de trabajo. Si un valor cae entre dos tamaños comerciales, se coge <b>el inmediatamente superior</b>.'
     + (porMirar ? ' · <b>Las marcadas en ámbar</b> son las que algunos inversores traen de fábrica y otros no: míralo en el equipo antes de comprarlas.' : ''));
+
+  /* cuánto cuestan estas protecciones en Cuba */
+  {
+    const P = PRECIOS.piezas, pk = PRECIOS.packs;
+    const grande = d.P > 6000;
+    const breq = grande ? pk.brequera1012 : pk.brequera36;
+    // por piezas: el pack de cinco + la caja + la varilla de tierra
+    const porPiezas = pk.proteccion.usd + P.cajaBreakers.usd + P.varillaTierra.usd;
+    const conBrequera = breq.usd + P.varillaTierra.usd;
+    const mejor = conBrequera <= porPiezas ? 'brequera' : 'piezas';
+
+    let hp = '<div class="titular"><b>Entre ' + din(Math.min(porPiezas, conBrequera))
+      + ' y ' + din(Math.max(porPiezas, conBrequera)) + '</b>'
+      + '<small>Con precios de compra en Cuba de septiembre. '
+      + 'Métele la cifra que elijas en <b>Dinero → Protecciones</b>.</small></div>';
+
+    hp += '<div class="sep">Camino 1 · por piezas</div>'
+      + fila(pk.proteccion.n, din(pk.proteccion.usd),
+          'Trae: ' + pk.proteccion.lleva.join(', ') + '. Sueltas costarían '
+          + din(145) + ', así que el pack ahorra ' + din(20))
+      + fila(P.cajaBreakers.n, din(P.cajaBreakers.usd), P.cajaBreakers.de)
+      + fila(P.varillaTierra.n, din(P.varillaTierra.usd), 'Sin esto no hay puesta a tierra')
+      + fila('<b>Total por piezas</b>', din(porPiezas), '', mejor === 'piezas' ? 'ok' : '');
+
+    hp += '<div class="sep">Camino 2 · brequera ya cableada</div>'
+      + fila(breq.n, din(breq.usd), breq.lleva.join(' · '))
+      + fila(P.varillaTierra.n, din(P.varillaTierra.usd), 'Va aparte igualmente')
+      + fila('<b>Total con brequera</b>', din(conBrequera), 'Llega montada y cableada: se ahorra tiempo de taller',
+          mejor === 'brequera' ? 'ok' : '');
+
+    hp += '<div class="sep">Lo que falta comprobar</div>'
+      + fila('<span class="pt warn"></span>¿Lleva diferencial de 30 mA?', 'PREGUNTAR',
+          'Es la protección de las personas. <b>Si no lo trae, hay que sumarlo</b>', 'warn')
+      + fila('<span class="pt warn"></span>¿Lleva fusible Clase T?', 'PREGUNTAR',
+          'Un breaker no corta el cortocircuito de una batería de litio. <b>Si no lo trae, hay que sumarlo</b>', 'warn')
+      + fila('<span class="pt warn"></span>¿De cuántos amperios vienen los breakers?', 'PREGUNTAR',
+          'Este sistema pide <b>' + d.brkDC + ' A</b> en la batería y <b>' + d.brkAC + ' A</b> en alterna. '
+          + 'Unos genéricos no valen', 'warn');
+
+    h += caja('Cuánto cuestan estas protecciones', hp,
+      'Precios de compra de <b>' + PRECIOS.fecha + '</b>, al cambio de <b>' + PRECIOS.cambio
+      + ' CUP por dólar</b>. En Cuba se mueven, así que confírmalos antes de cotizar. '
+      + '<b>El protector de voltaje y el SPD no son lo mismo</b>: el primero vigila que la red no se vaya '
+      + 'de rango (el neutro flojo), el segundo se come el pico de un rayo. Hacen falta los dos.');
+  }
 
   /* lo que el inversor ya lleva por dentro */
   h += caja('Lo que este inversor ya trae por dentro',
