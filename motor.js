@@ -303,42 +303,66 @@ export function compatibilidad(d, inv, bat){
 }
 
 /* ═══════════════ 7 · PROTECCIONES ═══════════════ */
-export function protecciones(d){
+export function protecciones(d, inv){
   const vSPDac = d.Vac <= 130 ? '150–175 V' : '275 V';
   const vDC = Math.ceil(d.Vstring / 50) * 50;
+  const trae = (inv && inv.trae) || [];        // lo que ESE inversor ya lleva dentro
+  const sabido = !!(inv && !inv.manual && inv.trae);   // ¿está comprobado en su ficha?
   const L = [];
-  const add = (grupo, pieza, valor, nota) => L.push({ grupo, pieza, valor, nota });
+  const add = (grupo, clave, pieza, valor, nota) => L.push({
+    grupo, clave, pieza, valor, nota,
+    viene: trae.includes(clave),
+    // si no hay ficha del inversor, lo que podría venir de fábrica se marca para mirar
+    comprobar: !sabido && ['brkAC','seccPV','brkDC'].includes(clave) });
 
-  add('Batería','Breaker CC de batería', d.brkDC + ' A · 125 V CC',
+  add('Batería','brkDC','Breaker CC de batería', d.brkDC + ' A · 125 V CC',
     'MCCB de corriente continua, 2 polos. El inversor tira ' + Math.round(d.Ibat) + ' A a plena carga');
-  add('Batería','Fusible Clase T + portafusible', d.fusT + ' A · 125 V CC',
-    'Poder de corte ≥ 20 kA. Va pegado al borne positivo de la batería');
-  add('Batería','Cable de batería', d.cabBat,
+  add('Batería','fusT','Fusible Clase T + portafusible', d.fusT + ' A · 125 V CC',
+    'Poder de corte ≥ 20 kA. Va pegado al borne positivo de la batería. <b>Ningún inversor lo trae</b>');
+  add('Batería','cabBat','Cable de batería', d.cabBat,
     'Dos tramos, positivo y negativo, con terminales de ojal crimpados');
 
-  add('Paneles','Seccionador CC', sig(d.Ifv, [16,25,32,40,63]) + ' A · ' + vDC + ' V CC',
+  add('Paneles','seccPV','Seccionador CC', sig(d.Ifv, [16,25,32,40,63]) + ' A · ' + vDC + ' V CC',
     'Rotativo de carga, 2 polos. Específico de continua');
-  add('Paneles','SPD de continua', 'Tipo 2 · ' + vDC + ' V CC',
+  add('Paneles','spdDC','SPD de continua', 'Tipo 2 · ' + vDC + ' V CC',
     'Protege la entrada del MPPT de los rayos cercanos');
   if (d.fusiblesStr)
-    add('Paneles','Fusibles de cadena', d.fusStrA + ' A · ' + d.strings + ' pares',
+    add('Paneles','fusStr','Fusibles de cadena', d.fusStrA + ' A · ' + d.strings + ' pares',
       'Con ' + d.strings + ' cadenas en paralelo son obligatorios: uno por polo y por cadena');
-  add('Paneles','Cable solar', d.cabFV, 'H1Z2Z2-K o PV-1F, resistente al sol. Rojo y negro');
+  add('Paneles','cabFV','Cable solar', d.cabFV, 'H1Z2Z2-K o PV-1F, resistente al sol. Rojo y negro');
 
-  add('Alterna','Breaker AC bipolar', d.brkAC + ' A · curva C',
+  add('Alterna','brkAC','Breaker AC bipolar', d.brkAC + ' A · curva C',
     '2 polos. A ' + d.Vac + ' V el inversor tira ' + Math.round(d.Iac) + ' A');
-  add('Alterna','Interruptor diferencial', d.dif + ' A / 30 mA · Tipo A',
+  add('Alterna','dif','Interruptor diferencial', d.dif + ' A / 30 mA · Tipo A',
     'Los ' + d.dif + ' A son la corriente que deja pasar; los 30 mA son la fuga con la que salta. '
-    + 'Los dos hacen falta y miden cosas distintas');
-  add('Alterna','SPD de alterna', 'Tipo 2 · ' + vSPDac + ' · 20–40 kA',
+    + 'Los dos hacen falta y miden cosas distintas. <b>Ningún inversor lo trae</b>');
+  add('Alterna','spdAC','SPD de alterna', 'Tipo 2 · ' + vSPDac + ' · 20–40 kA',
     'La tensión depende de la red: ' + vSPDac + ' para una red de ' + d.Vac + ' V');
-  add('Alterna','Cable de salida', d.cabAC, 'Del inversor al tablero de cargas respaldadas');
+  add('Alterna','cabAC','Cable de salida', d.cabAC, 'Del inversor al tablero de cargas respaldadas');
 
-  add('Tierra','Cable de tierra', d.Ifv > 40 ? '10 mm² (8 AWG)' : '6 mm² (10 AWG)',
+  add('Tierra','cabTierra','Cable de tierra', d.Ifv > 40 ? '10 mm² (8 AWG)' : '6 mm² (10 AWG)',
     'Sube de sección cuando la corriente del campo pasa de 40 A');
-  add('Tierra','Terminales de marco', d.npan + ' unidades', 'Uno por panel, al marco de aluminio');
-  add('Tierra','Varilla y abrazadera', '1 juego', 'Varilla de cobre, abrazadera y barra equipotencial');
+  add('Tierra','termMarco','Terminales de marco', d.npan + ' unidades', 'Uno por panel, al marco de aluminio');
+  add('Tierra','varilla','Varilla y abrazadera', '1 juego', 'Varilla de cobre, abrazadera y barra equipotencial');
 
+  return L;
+}
+
+/* ═══════════════ 8 bis · LO QUE EL INVERSOR YA LLEVA DENTRO ═══════════════
+   Todo híbrido trae protecciones electrónicas. La trampa es creer que
+   sustituyen a las físicas: no lo hacen. La electrónica del inversor
+   protege AL INVERSOR. No protege el cable, ni la casa, ni a las personas. */
+export function internas(inv){
+  const L = [
+    ['Controlador de carga MPPT', 'Por eso no hace falta regulador aparte. Esto sí te lo ahorras.'],
+    ['Protección de sobrecarga', 'Se apaga solo si le pides más potencia de la que da.'],
+    ['Corte por cortocircuito en la salida', 'Electrónico. <b>No sustituye al breaker</b>: el breaker protege el cable, no el inversor.'],
+    ['Corte por descarga profunda', 'Apaga antes de dejar la batería seca. <b>No sustituye al fusible Clase T</b>, que es lo que corta un cortocircuito de litio.'],
+    ['Protección de sobretemperatura', 'Baja potencia o se para si se calienta.'],
+  ];
+  if (inv && !inv.manual && (inv.trae || []).includes('brkAC'))
+    L.unshift(['Breaker físico en la salida',
+      '<b>Este modelo sí lo trae de fábrica</b>, viene en su ficha. No compres otro para la salida del inversor.']);
   return L;
 }
 

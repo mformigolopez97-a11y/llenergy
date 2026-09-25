@@ -45,7 +45,7 @@ export function datosCot(t, aj){
     precio: +t.dinero.precio || 0,
     montaje: +t.dinero.cobroMontaje || 0,
     garantia: +aj.garantiaMeses || 12,
-    protecciones: M.protecciones(d),
+    protecciones: M.protecciones(d, null).filter(p => !p.viene),
   };
 }
 

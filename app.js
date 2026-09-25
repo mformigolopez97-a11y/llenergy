@@ -10,7 +10,7 @@ import { MODELOS, BATS } from './datos.js';
 import { datosCot, htmlCot, empaquetarCot, desempaquetarCot } from './cotizacion.js';
 
 const LS = 'llenergy-v1';
-const VERSION_APP = 'v16';   // sube con cada publicación, junto a la de sw.js
+const VERSION_APP = 'v17';   // sube con cada publicación, junto a la de sw.js
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
@@ -343,13 +343,36 @@ function pintarDiseno(){
       : 'Arregla primero el voltaje.');
 
   /* --- protecciones --- */
+  const lista = M.protecciones(d, inv);
+  const yaVienen = lista.filter(p => p.viene).length;
+  const porMirar = lista.filter(p => p.comprobar).length;
   let ult = '', prot = '';
-  M.protecciones(d).forEach(p => {
+  if (yaVienen)
+    prot += '<div class="titular"><b>' + yaVienen + ' de estas ya vienen en el inversor</b>'
+      + '<small>Están marcadas abajo. <b>No las metas en el presupuesto</b>, que sería cobrarlas dos veces.</small></div>';
+  lista.forEach(p => {
     if (p.grupo !== ult){ prot += '<div class="sep">' + p.grupo + '</div>'; ult = p.grupo; }
-    prot += fila(p.pieza, p.valor, p.nota);
+    const marca = p.viene
+      ? '<span class="pt ok"></span>'
+      : (p.comprobar ? '<span class="pt warn"></span>' : '');
+    prot += fila(marca + p.pieza,
+      p.viene ? 'YA VIENE' : p.valor,
+      p.viene ? '<b>Este inversor ya lo trae de fábrica.</b> No hace falta comprarlo.'
+        : (p.comprobar
+            ? p.nota + ' · <b>Mira el equipo antes de comprarlo</b>: hay inversores que lo traen en el lateral'
+            : p.nota),
+      p.viene ? 'ok' : (p.comprobar ? 'warn' : ''));
   });
   h += caja('Protecciones que hay que montar', prot,
-    'Calculado al 125 % de la corriente de trabajo. Si un valor cae entre dos tamaños comerciales, se coge <b>el inmediatamente superior</b>.');
+    'Calculado al 125 % de la corriente de trabajo. Si un valor cae entre dos tamaños comerciales, se coge <b>el inmediatamente superior</b>.'
+    + (porMirar ? ' · <b>Las marcadas en ámbar</b> son las que algunos inversores traen de fábrica y otros no: míralo en el equipo antes de comprarlas.' : ''));
+
+  /* lo que el inversor ya lleva por dentro */
+  h += caja('Lo que este inversor ya trae por dentro',
+    M.internas(inv).map(([t, n]) => fila('<span class="pt ok"></span>' + t, 'SÍ', n, 'ok')).join(''),
+    '<b>Cuidado con esto:</b> la electrónica del inversor protege <b>al inversor</b>. '
+    + 'No protege el cable, ni la casa, ni a las personas. Por eso siguen haciendo falta las de arriba, '
+    + 'salvo las que aparezcan marcadas como «ya viene».');
 
   /* --- materiales --- */
   const mo = M.montaje(e), cx = M.conexion(d, e);
