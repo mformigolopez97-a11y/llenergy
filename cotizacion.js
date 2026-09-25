@@ -23,6 +23,7 @@ const fechaLarga = d => d.getDate() + ' de ' + MESES[d.getMonth()] + ' de ' + d.
 
 /* ─────────── qué lleva la cotización ─────────── */
 export function datosCot(t, aj){
+  if ((t.tipo || 'montaje') === 'venta') return datosVenta(t, aj);
   const s = t.sistema, d = M.dimensionar({
     ...s, pinv:+s.pinv, vac:+s.vac, vbat:+s.vbat, ah:+s.ah, abms:+s.abms,
     nbat:+s.nbat, icar:+s.icar, npan:+s.npan, wpan:+s.wpan, voc:+s.voc, isc:+s.isc,
@@ -48,8 +49,20 @@ export function datosCot(t, aj){
   };
 }
 
+/* ─────────── cuando es venta de equipos, sin montaje ─────────── */
+function datosVenta(t, aj){
+  const hoy = new Date();
+  const vence = new Date(hoy.getTime() + (+aj.validezDias || 15) * 86400000);
+  const arts = (t.articulos || []).filter(a => +a.cant > 0);
+  const total = arts.reduce((s,a) => s + (+a.precio||0) * (+a.cant||0), 0);
+  return { venta:true, cliente:t.nombre, zona:t.zona,
+    hoy: fechaLarga(hoy), vence: fechaLarga(vence),
+    arts, precio: total, garantia: +aj.garantiaMeses || 12 };
+}
+
 /* ─────────── el documento ─────────── */
 export function htmlCot(c){
+  if (c.venta) return htmlVenta(c);
   const fila = (a, b) => '<tr><td>' + a + '</td><td class="v">' + b + '</td></tr>';
 
   const equipos = [
@@ -74,9 +87,8 @@ export function htmlCot(c){
       <svg viewBox="0 0 100 100" width="40" height="40" aria-hidden="true">
         <defs><clipPath id="cotH"><rect x="0" y="0" width="100" height="62"/></clipPath></defs>
         <circle cx="50" cy="58" r="21" fill="#E8701F" clip-path="url(#cotH)"/>
-        <g stroke="#E8701F" stroke-linecap="round">
-          <path d="M50 31L50 21M26.6 44.5L18 39.5M73.4 44.5L82 39.5" stroke-width="6.5"/>
-          <path d="M36.5 34.6L33 28.6M63.5 34.6L67 28.6" stroke-width="4.5"/></g>
+        <g stroke="#E8701F" stroke-width="4.5" stroke-linecap="round">
+          <path d="M23.4 62.7L15.5 64.1M26.6 44.5L19.7 40.5M36.5 34.6L32.5 27.7M50 31L50 23M63.5 34.6L67.5 27.7M73.4 44.5L80.3 40.5M76.6 62.7L84.5 64.1"/></g>
         <rect x="12" y="70" width="76" height="7" rx="3.5" fill="#1E8E52"/>
         <rect x="26" y="83" width="48" height="7" rx="3.5" fill="#1E8E52" opacity=".5"/>
       </svg>
@@ -155,11 +167,88 @@ export function htmlCot(c){
 </div>`;
 }
 
+/* ─────────── el documento de una venta de equipos ─────────── */
+function htmlVenta(c){
+  const filas = c.arts.map(a =>
+    '<tr><td>' + esc(a.nombre) + (a.cant > 1 ? ' <span style="color:#8A8075">× ' + a.cant + '</span>' : '')
+    + '</td><td class="v">' + din((+a.precio||0) * (+a.cant||0)) + '</td></tr>').join('');
+
+  return `
+<div class="cot">
+  <header class="cab">
+    <div class="marca">
+      <svg viewBox="0 0 100 100" width="40" height="40" aria-hidden="true">
+        <defs><clipPath id="cotV"><rect x="0" y="0" width="100" height="62"/></clipPath></defs>
+        <circle cx="50" cy="58" r="21" fill="#E8701F" clip-path="url(#cotV)"/>
+        <g stroke="#E8701F" stroke-width="4.5" stroke-linecap="round">
+          <path d="M23.4 62.7L15.5 64.1M26.6 44.5L19.7 40.5M36.5 34.6L32.5 27.7M50 31L50 23M63.5 34.6L67.5 27.7M73.4 44.5L80.3 40.5M76.6 62.7L84.5 64.1"/></g>
+        <rect x="12" y="70" width="76" height="7" rx="3.5" fill="#1E8E52"/>
+        <rect x="26" y="83" width="48" height="7" rx="3.5" fill="#1E8E52" opacity=".5"/>
+      </svg>
+      <div><div class="emp">Light of Life Energy</div>
+        <div class="lin">Equipos solares y de respaldo</div></div>
+    </div>
+    <div class="ref"><div>Venta de equipos</div><div class="fh">${c.hoy}</div></div>
+  </header>
+
+  <h1>Propuesta para ${esc(c.cliente)}</h1>
+  ${c.zona ? '<p class="zona">' + esc(c.zona) + '</p>' : ''}
+
+  <section class="destacado">
+    <div class="precio-caja">
+      <div class="et">Total de los equipos</div>
+      <div class="cifra">${din(c.precio)}</div>
+      <div class="nota">Dólares estadounidenses. <b>Solo equipos: no incluye montaje.</b></div>
+    </div>
+  </section>
+
+  <h2>Qué se entrega</h2>
+  <table>${filas}</table>
+
+  <h2>Garantía</h2>
+  <p class="cuerpo"><b>${c.garantia} meses</b> sobre los equipos, desde la entrega.</p>
+  <p class="cuerpo">Los equipos se prueban <b>delante del cliente antes de entregarlos</b>.
+  Si alguno no enciende o no funciona en ese momento, se cambia ahí mismo.</p>
+
+  <h2>Lo que hay que entender antes de comprar</h2>
+  <ol class="condiciones">
+    <li><b>La instalación no va incluida, y eso cambia la garantía.</b> Al no
+      montarlo nosotros, no podemos responder de cómo quede conectado. Un
+      inversor bien hecho se estropea igual si se cablea mal, si se conecta a
+      una batería que no le corresponde o si le falta la protección adecuada.</li>
+    <li><b>Cada equipo tiene sus límites y hay que respetarlos.</b> El voltaje de
+      la batería, la tensión máxima de los paneles y los amperios de cada
+      protección no son orientativos: pasarse de ahí destruye el equipo y eso
+      no lo cubre ninguna garantía.</li>
+    <li><b>Si no está seguro, pregunte antes de conectar.</b> Le decimos sin
+      coste cómo va montado. Una consulta de dos minutos sale más barata que un
+      inversor quemado.</li>
+    <li><b>Las baterías de litio van en sitio fresco y ventilado</b>, entre 0 y
+      45 °C. Fuera de ese rango dejan de cargar solas.</li>
+  </ol>
+
+  <h2>Si prefiere que se lo montemos</h2>
+  <p class="cuerpo">También hacemos la instalación completa, con todas las
+  protecciones calculadas para el equipo, la estructura y la puesta a tierra.
+  En ese caso la garantía cubre además el trabajo. Pídanos la cotización del
+  sistema instalado y la comparamos.</p>
+
+  <footer class="pie">
+    <div class="validez">Esta cotización es válida hasta el <b>${c.vence}</b>.</div>
+    <div class="pago">El pago puede hacerse en dólares, o en pesos cubanos
+      al cambio del día en que se realice.</div>
+  </footer>
+</div>`;
+}
+
 /* ─────────── el enlace que se le manda al cliente ─────────── */
 export function empaquetarCot(t, aj){
   const p = { v:1, n:t.nombre, z:t.zona, s:t.sistema,
     pr:+t.dinero.precio || 0, mo:+t.dinero.cobroMontaje || 0,
-    ga:+aj.garantiaMeses || 12, va:+aj.validezDias || 15 };
+    ga:+aj.garantiaMeses || 12, va:+aj.validezDias || 15,
+    ti: t.tipo || 'montaje',
+    ar: (t.tipo === 'venta' ? (t.articulos || []) : [])
+      .map(a => ({ n:a.nombre, c:+a.cant||0, p:+a.precio||0 })) };
   const bytes = new TextEncoder().encode(JSON.stringify(p));
   let bin = ''; bytes.forEach(b => bin += String.fromCharCode(b));
   return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -172,7 +261,9 @@ export function desempaquetarCot(cod){
       Uint8Array.from(bin, ch => ch.charCodeAt(0))));
     if (!p || p.v !== 1 || !p.s) return null;
     return { t: { nombre:p.n, zona:p.z, sistema:p.s,
-        dinero:{ precio:p.pr, cobroMontaje:p.mo } },
+        dinero:{ precio:p.pr, cobroMontaje:p.mo },
+        tipo: p.ti || 'montaje',
+        articulos: (p.ar || []).map(a => ({ nombre:a.n, cant:a.c, precio:a.p, coste:0 })) },
       aj: { garantiaMeses:p.ga, validezDias:p.va } };
   } catch(e){ return null; }
 }

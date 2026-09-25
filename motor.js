@@ -425,3 +425,38 @@ export function resumenCobros(cobros, precio, gastoEnCup){
     planCup: Math.round(+gastoEnCup || 0),
     planUsd: Math.round(Math.max(0, (+precio || 0) - (+gastoEnCup || 0))) };
 }
+
+/* ═══════════════ 11 · VENTA DE EQUIPOS SUELTOS ═══════════════
+   Hay clientes que no quieren montaje: solo el inversor, solo los paneles,
+   o el inversor y las baterías porque no les alcanza para paneles.
+
+   Aquí el margen no es del sistema, es de cada artículo. Y como no hay
+   instalación, tampoco hay mano de obra ni estructura que descontar. */
+export function negocioVenta(articulos, fondoPct, minPct, socioPct){
+  const L = (articulos || []).filter(a => a && +a.cant > 0);
+
+  let coste = 0, venta = 0;
+  const items = L.map(a => {
+    const c = (+a.coste || 0) * (+a.cant || 0);
+    const v = (+a.precio || 0) * (+a.cant || 0);
+    coste += c; venta += v;
+    const g = v - c;
+    return { ...a, costeTotal:c, ventaTotal:v, ganancia:g,
+      pct: v > 0 ? g / v * 100 : 0,
+      // precio mínimo por unidad para no bajar del margen que se defiende
+      minUnidad: (1 - (minPct||0)/100) > 0 ? (+a.coste || 0) / (1 - (minPct||0)/100) : 0 };
+  });
+
+  const fp = Math.max(0, +fondoPct || 0);
+  const fondo = venta * fp / 100;
+  const ganancia = venta - coste - fondo;
+  const pctVenta = venta > 0 ? ganancia / venta * 100 : 0;
+  const pctInversion = coste > 0 ? ganancia / coste * 100 : 0;
+  const den = 1 - fp/100 - (+minPct || 0)/100;
+  const ventaMin = den > 0 ? coste / den : 0;
+
+  return { items, coste, venta, fondo, fondoPct:fp, ganancia, pctVenta, pctInversion,
+    ventaMin,
+    paraMi: ganancia * (100 - (+socioPct || 0)) / 100,
+    paraSocia: ganancia * (+socioPct || 0) / 100 };
+}

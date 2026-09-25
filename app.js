@@ -73,7 +73,7 @@ function cargar(){
       S.trabajos = (g.trabajos||[]).map(t => ({
         ...t, sistema:{...SISTEMA, ...(t.sistema||{})},
         dinero:{...DINERO, ...(t.dinero||{})}, visita:{...VISITA, ...(t.visita||{})},
-        cobros: t.cobros || [] }));
+        cobros: t.cobros || [], tipo: t.tipo || 'montaje', articulos: t.articulos || [] }));
     }
   } catch(e){ /* si el guardado está corrupto, se empieza limpio */ }
   if (!S.trabajos.length) nuevoTrabajo('Ejemplo · casa de El Cobre', 'El Cobre, Santiago', true);
@@ -88,7 +88,9 @@ function nuevoTrabajo(nombre, zona, ejemplo){
     estado:'visita', ejemplo: !!ejemplo,
     sistema:{...SISTEMA},
     dinero: ejemplo ? {...DINERO_EJEMPLO} : {...DINERO},
-    visita:{...VISITA}, cobros:[] };
+    visita:{...VISITA}, cobros:[],
+    tipo:'montaje',    // 'montaje' = sistema instalado · 'venta' = equipos sueltos
+    articulos:[] };
   S.trabajos.unshift(t); S.activo = t.id; return t;
 }
 const activo = () => S.trabajos.find(t => t.id === S.activo) || S.trabajos[0];
@@ -130,8 +132,12 @@ function sistemaDe(t){
 /* ═══════════════ PANTALLA · TRABAJOS ═══════════════ */
 /* el estado del cobro, de un vistazo, solo en modo Oficina */
 function pagoChip(t){
-  if (!(t.cobros || []).length && !num(t.dinero.precio)) return '';
-  const r = M.resumenCobros(t.cobros, num(t.dinero.precio), 0);
+  const esVenta = (t.tipo || 'montaje') === 'venta';
+  const total = esVenta
+    ? (t.articulos || []).reduce((s,a) => s + (+a.precio||0) * (+a.cant||0), 0)
+    : num(t.dinero.precio);
+  if (!(t.cobros || []).length && !total) return '';
+  const r = M.resumenCobros(t.cobros, total, 0);
   const C = { 'sin cobrar':['visita','Sin cobrar'], parcial:['aceptado', Math.round(r.pct) + ' %'], pagado:['montado','Pagado'] };
   const [cl, tx] = C[r.estado];
   return '<span class="estado ' + cl + '" style="margin-left:5px">' + tx + '</span>';
@@ -145,8 +151,11 @@ function pintarTrabajos(){
       + (t.id === S.activo ? ' aria-current="true"' : '') + '>'
       + '<span class="d"><span class="nm">' + esc(t.nombre) + '</span>'
       + '<span class="zn">' + (t.zona ? esc(t.zona) + ' · ' : '')
-      + e.P/1000 + ' kW · ' + e.kWh.toFixed(1).replace('.',',') + ' kWh · '
-      + e.npan + ' panel' + (e.npan===1?'':'es') + '</span></span>'
+      + ((t.tipo||'montaje') === 'venta'
+          ? 'Venta de equipos · ' + (t.articulos||[]).length + ' artículo'
+            + ((t.articulos||[]).length===1?'':'s')
+          : e.P/1000 + ' kW · ' + e.kWh.toFixed(1).replace('.',',') + ' kWh · '
+            + e.npan + ' panel' + (e.npan===1?'':'es')) + '</span></span>'
       + '<span class="estado ' + t.estado + '">' + ETIQ[t.estado] + '</span>'
       + (S.rol === 'oficina' ? pagoChip(t) : '') + '</button>';
   }).join('');
@@ -162,6 +171,9 @@ function pintarTrabajos(){
     campo('t_nombre','Nombre del cliente','',txtInp('t_nombre', t.nombre, 'Nombre y apellido'), true)
     + campo('t_zona','Zona','',txtInp('t_zona', t.zona, 'El Cobre, Santiago'), true)
     + campo('t_contacto','Teléfono o WhatsApp','',txtInp('t_contacto', t.contacto, '+53 5 ...'), true)
+    + campo('t_tipo','Qué es este trabajo','Cambia lo que se calcula y lo que ve el cliente',
+        sel('t_tipo', t.tipo || 'montaje',
+          [['montaje','Sistema completo instalado'],['venta','Venta de equipos, sin montaje']]))
     + campo('t_estado','En qué va','',sel('t_estado', t.estado,
         [['visita','Visita hecha'],['cotizado','Cotizado'],['aceptado','Aceptado'],['montado','Montado']]))
     + '<button type="button" class="btn" id="btnEnviar" style="margin-top:14px">Enviar al instalador</button>'
@@ -402,6 +414,7 @@ function pintarDinero(){
     return;
   }
   const t = activo(), m = t.dinero, a = S.ajustes;
+  if ((t.tipo || 'montaje') === 'venta') return pintarVenta(t, a);
   const n = M.negocio({ kit:num(m.kit), npan:num(t.sistema.npan), ppan:num(m.ppan),
     prot:num(m.prot), cab:num(m.cab), estr:num(m.estr), obra:num(m.obra), trans:num(m.trans),
     precio:num(m.precio), fondoPct:num(a.fondoPct), minPct:num(a.minPct), socioPct:num(a.socioPct) });
@@ -526,6 +539,108 @@ function pintarDinero(){
                  : 'El capital no llega ni para un sistema completo', cabenOps ? 'ok' : 'bad')
     + fila('Ganancia si se cierran los ' + (cabenOps||0), din(n.ganancia * cabenOps), 'Antes de repartir', 'ok'),
     'Acuérdate de descontar el inversor de repuesto: va siempre con el equipo y también es capital inmovilizado.');
+
+  $('p-dinero').innerHTML = h;
+}
+
+/* ═══════════════ DINERO · VENTA DE EQUIPOS SUELTOS ═══════════════ */
+function pintarVenta(t, a){
+  const arts = t.articulos || [];
+  const v = M.negocioVenta(arts, num(a.fondoPct), num(a.minPct), num(a.socioPct));
+  const bajo = v.venta > 0 && v.pctVenta < num(a.minPct);
+
+  let h = '<div class="kpi"><div class="k">Ganancia limpia de la venta</div>'
+    + '<div class="v ' + (v.venta <= 0 ? '' : bajo ? 'bad' : 'ok') + '">' + din(v.ganancia) + '</div>'
+    + '<div class="s">' + (v.venta > 0
+        ? v.pctVenta.toFixed(1).replace('.',',') + ' % de la venta · '
+          + v.pctInversion.toFixed(1).replace('.',',') + ' % de lo invertido · ya descontado el fondo'
+        : 'Añade los equipos que le vendes y aparece el número') + '</div></div>';
+
+  h += '<div class="kpi dos"><div><div class="k">Te cuesta</div><div class="v">' + din(v.coste) + '</div></div>'
+    + '<div><div class="k">Venta mínima al ' + a.minPct + ' %</div>'
+    + '<div class="v ' + (bajo ? 'bad' : 'ok') + '">' + din(v.ventaMin) + '</div></div></div>';
+
+  if (bajo)
+    h += caja('Estás por debajo de tu suelo',
+      '<div class="titular rojo"><b>No la cierres en ' + din(v.venta) + '</b>'
+      + '<small>Tu suelo es el <b>' + a.minPct + ' %</b>. Con estos equipos la venta no puede bajar de '
+      + '<b>' + din(v.ventaMin) + '</b>. Te faltan ' + din(v.ventaMin - v.venta) + '.</small></div>');
+
+  /* los artículos */
+  let ha = '';
+  if (!arts.length){
+    ha = '<div class="vacio"><b>Todavía no hay equipos</b>'
+      + 'Añade abajo lo que le vas a vender: un inversor, unos paneles, unas baterías. '
+      + 'Cada uno con lo que te cuesta y a cuánto lo vendes.</div>';
+  } else {
+    v.items.forEach((it, i) => {
+      const flojo = it.pct < num(a.minPct);
+      ha += fila(esc(it.nombre || 'Sin nombre')
+          + ' <span style="opacity:.55">· ' + it.cant + ' ud.</span>',
+        din(it.ventaTotal),
+        'Te cuesta ' + din(it.costeTotal) + ' · ganas <b>' + din(it.ganancia) + '</b> ('
+        + it.pct.toFixed(0) + ' %)'
+        + (flojo ? ' · <b>por debajo de tu ' + a.minPct + ' %: mínimo ' + din(it.minUnidad) + ' la unidad</b>' : '')
+        + ' <button type="button" class="mini" data-quitaart="' + i + '">Quitar</button>',
+        flojo ? 'warn' : '');
+    });
+    ha += fila('<b>Total de la venta</b>', din(v.venta),
+      'Coste ' + din(v.coste) + ' · fondo de garantía ' + din(v.fondo), 'ok');
+  }
+
+  ha += '<div class="sep">Añadir un equipo</div>'
+    + campo('v_nombre','Qué es','Como se lo vas a decir al cliente',
+        txtInp('v_nombre','','Inversor MUST 6 kW'), true)
+    + campo('v_cant','Cuántos','', numInp('v_cant', 1, 1, 99, 1))
+    + campo('v_coste','Lo que te cuesta cada uno','', numInp('v_coste','',0,99999,1))
+    + campo('v_precio','A cuánto lo vendes cada uno','', numInp('v_precio','',0,99999,1))
+    + '<button type="button" class="btn" id="btnArt" style="margin-top:12px">Añadir a la venta</button>';
+
+  h += caja('Equipos que le vendes', ha,
+    'Aquí no hay mano de obra ni estructura: <b>no montas nada</b>. El margen sale de cada equipo, '
+    + 'y la app te avisa si alguno se queda por debajo de tu suelo aunque el total cuadre.');
+
+  /* cobros: igual que en un montaje, pero sobre el total de la venta */
+  const rc = M.resumenCobros(t.cobros, v.venta, 0);
+  const tasa = num(a.usdCup);
+  const fech = ts => { const d = new Date(ts); const p = n => String(n).padStart(2,'0');
+    return p(d.getDate()) + '/' + p(d.getMonth()+1) + '/' + String(d.getFullYear()).slice(2); };
+  const EST = { 'sin cobrar':'Sin cobrar', parcial:'Cobrado a medias', pagado:'Pagado' };
+
+  let hc = '<div class="titular ' + (rc.estado === 'pagado' ? '' : rc.estado === 'parcial' ? 'info' : 'rojo') + '">'
+    + '<b>' + EST[rc.estado] + '</b><small>'
+    + (v.venta <= 0 ? 'Añade primero los equipos.'
+       : rc.estado === 'pagado' ? 'Han entrado ' + din(rc.cobrado) + ' de ' + din(v.venta) + '.'
+       : 'Han entrado <b>' + din(rc.cobrado) + '</b> de ' + din(v.venta) + '. Faltan <b>' + din(rc.falta) + '</b>.')
+    + '</small></div>';
+
+  if (rc.n){
+    hc += '<div class="sep">Lo que ha entrado</div>';
+    (t.cobros || []).forEach((c, i) => {
+      const cup = c.moneda === 'CUP';
+      hc += fila(esc(c.quien || 'Sin apuntar') + ' <span style="opacity:.55">· ' + fech(c.cuando) + '</span>',
+        cup ? miles(c.importe) + ' CUP' : din(c.importe),
+        (cup ? 'Al cambio de ' + (+c.cambio || '—') + ' CUP/USD · ' + din((+c.importe)/(+c.cambio||1)) : 'En dólares')
+        + ' <button type="button" class="mini" data-quita="' + i + '">Quitar</button>');
+    });
+  }
+  hc += '<div class="sep">Apuntar un cobro</div>'
+    + campo('c_importe','Cuánto entró','', numInp('c_importe','',0,9999999,1))
+    + campo('c_moneda','En qué moneda','', sel('c_moneda','USD',[['USD','Dólares'],['CUP','Pesos cubanos']]))
+    + campo('c_cambio','Cambio de ese día','Solo si fue en pesos', numInp('c_cambio', tasa || '',0,5000,1))
+    + campo('c_quien','Quién lo cobró','', sel('c_quien','Instalador',
+        [['Instalador','El instalador'],['Marcos','Yo'],['Otro','Otra persona']]))
+    + '<button type="button" class="btn" id="btnCobro" style="margin-top:12px">Apuntar este cobro</button>';
+
+  h += caja('Cobros', hc);
+
+  h += caja('Reparto',
+    fila('Para ti', din(v.paraMi), (100 - num(a.socioPct)) + ' % de la ganancia', 'ok')
+    + fila('Para la socia', din(v.paraSocia), num(a.socioPct) + ' % de la ganancia')
+    + fila('Fondo de garantía', din(v.fondo), 'El ' + v.fondoPct + ' % de la venta'));
+
+  h += '<button type="button" class="btn gris" id="btnCot" style="margin-top:4px">'
+    + 'Ver la cotización del cliente</button>';
 
   $('p-dinero').innerHTML = h;
 }
@@ -844,6 +959,7 @@ document.addEventListener('change', ev => {
     if (B && !B.manual){ t.sistema.vbat = B.v; t.sistema.ah = B.ah; t.sistema.abms = B.ides; }
     repinta();
   } else if (ev.target.id === 't_estado'){ t.estado = ev.target.value; repinta(); }
+  else if (ev.target.id === 't_tipo'){ t.tipo = ev.target.value; repinta(); }
 });
 
 /* repintar sin perder el foco ni la posición del cursor */
@@ -863,6 +979,24 @@ document.addEventListener('click', ev => {
   const ir = ev.target.closest('[data-ir]');
   if (ir){ S.activo = ir.dataset.ir; pintar(); return; }
   if (ev.target.id === 'btnNuevo'){ nuevoTrabajo(); pintar(); window.scrollTo(0,0); return; }
+  if (ev.target.id === 'btnArt'){
+    const t = activo();
+    const nom = $('v_nombre').value.trim();
+    const cant = num($('v_cant').value), coste = num($('v_coste').value), precio = num($('v_precio').value);
+    if (!nom){ alert('Ponle nombre al equipo.'); return; }
+    if (cant <= 0){ alert('Pon cuántos son.'); return; }
+    if (precio <= 0){ alert('Pon a cuánto lo vendes.'); return; }
+    t.articulos = t.articulos || [];
+    t.articulos.push({ nombre:nom, cant, coste, precio });
+    guardar(); pintar();
+    return;
+  }
+  const quitaArt = ev.target.closest('[data-quitaart]');
+  if (quitaArt){
+    const t = activo(), i = +quitaArt.dataset.quitaart;
+    if (confirm('¿Quitar ese equipo de la venta?')){ t.articulos.splice(i,1); guardar(); pintar(); }
+    return;
+  }
   if (ev.target.id === 'btnCobro'){
     const t = activo();
     const imp = num($('c_importe').value);
