@@ -10,6 +10,7 @@ import { MODELOS, BATS } from './datos.js';
 import { datosCot, htmlCot, empaquetarCot, desempaquetarCot } from './cotizacion.js';
 
 const LS = 'llenergy-v1';
+const VERSION_APP = 'v16';   // sube con cada publicación, junto a la de sw.js
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
@@ -721,9 +722,14 @@ function pintarAjustes(){
     'Haz una copia de vez en cuando. Si cambias de teléfono o se borra el navegador, es lo único que te devuelve los trabajos.');
 
   h += caja('Sobre la aplicación',
-    fila('Light of Life Energy', 'LLEnergy', 'Versión 1 · fase 1')
-    + fila('Funciona sin internet', $('estadoSW') ? 'sí' : '—', 'Una vez abierta, se queda guardada en el teléfono', 'ok')
-    + fila('Actualizaciones', 'Solas', 'Cuando haya una versión nueva se instala sola. No hay que desinstalar nada', 'ok'));
+    fila('Light of Life Energy', 'LLEnergy ' + VERSION_APP, 'Si esta versión no coincide con la que te digo, dale al botón de abajo')
+    + fila('Equipos en la lista',
+        Object.keys(MODELOS).length + ' inversores · ' + Object.keys(BATS).length + ' baterías',
+        'Sirve para comprobar de un vistazo si te llegó lo último', 'ok')
+    + fila('Funciona sin internet', 'Sí', 'Una vez abierta, se queda guardada en el teléfono', 'ok')
+    + '<button type="button" class="btn gris" id="btnActualizar" style="margin-top:12px">Buscar una versión nueva</button>'
+    + '<div id="msgAct" style="font-size:13px;color:var(--gris);margin-top:9px;min-height:18px"></div>',
+    'Normalmente se actualiza sola al abrirla. Este botón es para cuando quieras comprobarlo tú.');
 
   $('p-ajustes').innerHTML = h;
 }
@@ -979,6 +985,22 @@ document.addEventListener('click', ev => {
   const ir = ev.target.closest('[data-ir]');
   if (ir){ S.activo = ir.dataset.ir; pintar(); return; }
   if (ev.target.id === 'btnNuevo'){ nuevoTrabajo(); pintar(); window.scrollTo(0,0); return; }
+  if (ev.target.id === 'btnActualizar'){
+    const msg = t => { const e = $('msgAct'); if (e) e.textContent = t; };
+    msg('Buscando…');
+    (async () => {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (!reg){ msg('Esta copia no está instalada como app. Ábrela desde el enlace y añádela a la pantalla de inicio.'); return; }
+        await reg.update();
+        // se vacía lo guardado para que el próximo arranque lo traiga todo del servidor
+        if (window.caches){ const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); }
+        msg('Listo. Recargando con la versión nueva…');
+        setTimeout(() => location.reload(), 900);
+      } catch(e){ msg('No se pudo comprobar: ' + e.message); }
+    })();
+    return;
+  }
   if (ev.target.id === 'btnArt'){
     const t = activo();
     const nom = $('v_nombre').value.trim();
