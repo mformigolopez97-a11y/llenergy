@@ -74,8 +74,9 @@ export function htmlCot(c){
       <svg viewBox="0 0 100 100" width="40" height="40" aria-hidden="true">
         <defs><clipPath id="cotH"><rect x="0" y="0" width="100" height="62"/></clipPath></defs>
         <circle cx="50" cy="58" r="21" fill="#E8701F" clip-path="url(#cotH)"/>
-        <g stroke="#E8701F" stroke-width="6.5" stroke-linecap="round">
-          <path d="M50 16v9M18 40l6.5 6.5M82 40l-6.5 6.5"/></g>
+        <g stroke="#E8701F" stroke-linecap="round">
+          <path d="M50 31L50 21M26.6 44.5L18 39.5M73.4 44.5L82 39.5" stroke-width="6.5"/>
+          <path d="M36.5 34.6L33 28.6M63.5 34.6L67 28.6" stroke-width="4.5"/></g>
         <rect x="12" y="70" width="76" height="7" rx="3.5" fill="#1E8E52"/>
         <rect x="26" y="83" width="48" height="7" rx="3.5" fill="#1E8E52" opacity=".5"/>
       </svg>
