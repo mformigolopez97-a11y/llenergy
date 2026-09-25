@@ -88,7 +88,7 @@ export function htmlCot(c){
         <defs><clipPath id="cotH"><rect x="0" y="0" width="100" height="62"/></clipPath></defs>
         <circle cx="50" cy="58" r="21" fill="#E8701F" clip-path="url(#cotH)"/>
         <g stroke="#E8701F" stroke-width="4.5" stroke-linecap="round">
-          <path d="M23.4 62.7L15.5 64.1M25.2 47.3L17.9 44.1M35.2 35.4L30.8 28.8M50 31L50 23M64.8 35.4L69.2 28.8M74.8 47.3L82.1 44.1M76.6 62.7L84.5 64.1"/></g>
+          <path d="M23.4 63.4L15.4 63.4M25.2 47.3L17.9 44.1M35.2 35.4L30.8 28.8M50 31L50 23M64.8 35.4L69.2 28.8M74.8 47.3L82.1 44.1M76.6 63.4L84.6 63.4"/></g>
         <rect x="12" y="70" width="76" height="7" rx="3.5" fill="#1E8E52"/>
         <rect x="26" y="83" width="48" height="7" rx="3.5" fill="#1E8E52" opacity=".5"/>
       </svg>
@@ -181,7 +181,7 @@ function htmlVenta(c){
         <defs><clipPath id="cotV"><rect x="0" y="0" width="100" height="62"/></clipPath></defs>
         <circle cx="50" cy="58" r="21" fill="#E8701F" clip-path="url(#cotV)"/>
         <g stroke="#E8701F" stroke-width="4.5" stroke-linecap="round">
-          <path d="M23.4 62.7L15.5 64.1M25.2 47.3L17.9 44.1M35.2 35.4L30.8 28.8M50 31L50 23M64.8 35.4L69.2 28.8M74.8 47.3L82.1 44.1M76.6 62.7L84.5 64.1"/></g>
+          <path d="M23.4 63.4L15.4 63.4M25.2 47.3L17.9 44.1M35.2 35.4L30.8 28.8M50 31L50 23M64.8 35.4L69.2 28.8M74.8 47.3L82.1 44.1M76.6 63.4L84.6 63.4"/></g>
         <rect x="12" y="70" width="76" height="7" rx="3.5" fill="#1E8E52"/>
         <rect x="26" y="83" width="48" height="7" rx="3.5" fill="#1E8E52" opacity=".5"/>
       </svg>
