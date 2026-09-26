@@ -10,7 +10,7 @@ import { MODELOS, BATS, PRECIOS } from './datos.js';
 import { datosCot, htmlCot, empaquetarCot, desempaquetarCot } from './cotizacion.js';
 
 const LS = 'llenergy-v1';
-const VERSION_APP = 'v21';   // sube con cada publicación, junto a la de sw.js
+const VERSION_APP = 'v23';   // sube con cada publicación, junto a la de sw.js
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
@@ -22,7 +22,7 @@ const din = n => '$' + miles(n);
 const SISTEMA = { pinv:6, vac:230, vbat:51.2, ah:100, abms:100, nbat:1, icar:100,
   npan:4, wpan:650, voc:46, isc:18, vmax:450, vmppt:60, vmpmax:360, nmppt:1, impp:28,
   dist:12, plargo:2.38, pancho:1.13, orient:'v', filas:1, techo:'plano',
-  modeloInv:'must-6048-eco', modeloBat:'fintera-5' };
+  modeloInv:'', modeloBat:'' };   // vacío a propósito: hay que elegir, no heredar
 
 // Un trabajo nuevo empieza en cero: los precios los pone Marcos, no vienen
 // escritos en el programa. Así no hay ninguna cifra suya en el código.
@@ -111,9 +111,12 @@ const campo = (id, etiqueta, ayuda, control, ancho) =>
   '<div class="campo' + (ancho ? ' ancho' : '') + '"><label for="' + id + '">' + etiqueta
   + (ayuda ? '<small>' + ayuda + '</small>' : '') + '</label>' + control + '</div>';
 
-const numInp = (id, v, min, max, paso) =>
-  '<input type="number" id="' + id + '" value="' + v + '" min="' + min + '" max="' + max
-  + '" step="' + (paso || 1) + '" inputmode="decimal">';
+/* la unidad va pegada al número: así no se confunde un voltio con un amperio */
+const numInp = (id, v, min, max, paso, uni) =>
+  '<div class="uni">'
+  + '<input type="number" id="' + id + '" value="' + v + '" min="' + min + '" max="' + max
+  + '" step="' + (paso || 1) + '" inputmode="decimal">'
+  + (uni ? '<span>' + uni + '</span>' : '') + '</div>';
 
 const txtInp = (id, v, ph) =>
   '<input type="text" id="' + id + '" value="' + esc(v) + '" placeholder="' + esc(ph||'') + '">';
@@ -292,9 +295,9 @@ function pintarDiseno(){
     });
     return g;
   };
-  const selMarcas = (id, valor, tabla) => {
+  const selMarcas = (id, valor, tabla, vacio) => {
     const g = grupos(tabla);
-    let o = '';
+    let o = '<option value=""' + (valor ? '' : ' selected') + '>' + vacio + '</option>';
     Object.entries(g).forEach(([marca, items]) => {
       const opts = items.map(([k,n]) => '<option value="'+k+'"'
         + (k===valor?' selected':'') + '>' + esc(n) + '</option>').join('');
@@ -306,38 +309,38 @@ function pintarDiseno(){
   /* --- equipos --- */
   let h = caja('Equipos',
     campo('s_modeloInv','<b>Inversor</b>','Elígelo y se rellenan los datos solos, o mételos a mano',
-      selMarcas('s_modeloInv', s.modeloInv, MODELOS), true)
+      selMarcas('s_modeloInv', s.modeloInv, MODELOS, '— elige el inversor —'), true)
     + (inv.ficha ? '<div class="fila"><span class="tx">Ficha del fabricante</span>'
         + '<a class="vl" href="'+inv.ficha+'" target="_blank" rel="noopener">Abrir</a></div>' : '')
     + (inv.nota ? '<div class="fila"><span class="tx"><small>' + inv.nota + '</small></span></div>' : '')
-    + campo('s_modeloBat','<b>Batería</b>','',selMarcas('s_modeloBat', s.modeloBat, BATS), true)
+    + campo('s_modeloBat','<b>Batería</b>','',selMarcas('s_modeloBat', s.modeloBat, BATS, '— elige la batería —'), true)
     + (bat.ficha ? '<div class="fila"><span class="tx">Ficha de la batería</span>'
         + '<a class="vl" href="'+bat.ficha+'" target="_blank" rel="noopener">Abrir</a></div>' : '')
     + (bat.nota ? '<div class="fila"><span class="tx"><small>' + bat.nota + '</small></span></div>' : ''));
 
   h += caja('Números del sistema',
-    campo('s_pinv','Potencia del inversor','En kW', numInp('s_pinv', s.pinv, 1, 30, 0.1))
+    campo('s_pinv','Potencia del inversor','En kW', numInp('s_pinv', s.pinv, 1, 30, 0.1, 'kW'))
     + campo('s_vac','Salida del inversor','', sel('s_vac', s.vac,
         [[110,'110 V'],[120,'120 V'],[220,'220 V'],[230,'230 V'],[240,'240 V bifásico']]))
-    + campo('s_vbat','Voltaje de la batería','Las de litio de «48 V» son 51,2 V reales', numInp('s_vbat', s.vbat, 10, 60, 0.1))
-    + campo('s_ah','Capacidad','En amperios-hora', numInp('s_ah', s.ah, 10, 2000, 10))
-    + campo('s_abms','Corriente del BMS','De la etiqueta. Si no la tienes, pon los mismos Ah', numInp('s_abms', s.abms, 10, 1000, 10))
-    + campo('s_nbat','Baterías en paralelo','', numInp('s_nbat', s.nbat, 1, 12, 1))
-    + campo('s_icar','Carga máxima del inversor','Amperios que le mete a la batería', numInp('s_icar', s.icar, 5, 300, 5))
+    + campo('s_vbat','Voltaje de la batería','Las de litio de «48 V» son 51,2 V reales', numInp('s_vbat', s.vbat, 10, 60, 0.1, 'V'))
+    + campo('s_ah','Capacidad','En amperios-hora', numInp('s_ah', s.ah, 10, 2000, 10, 'Ah'))
+    + campo('s_abms','Corriente del BMS','De la etiqueta. Si no la tienes, pon los mismos Ah', numInp('s_abms', s.abms, 10, 1000, 10, 'A'))
+    + campo('s_nbat','Baterías en paralelo','', numInp('s_nbat', s.nbat, 1, 12, 1, 'uds'))
+    + campo('s_icar','Carga máxima del inversor','Amperios que le mete a la batería', numInp('s_icar', s.icar, 5, 300, 5, 'A'))
     + campo('s_kwh','Energía de la batería','', '<div class="calc">' + d.kWh.toFixed(2).replace('.',',')
         + ' kWh</div>')
-    + campo('s_npan','Número de paneles','', numInp('s_npan', s.npan, 1, 40, 1))
-    + campo('s_wpan','Vatios de cada panel','', numInp('s_wpan', s.wpan, 100, 800, 10))
+    + campo('s_npan','Número de paneles','', numInp('s_npan', s.npan, 1, 40, 1, 'uds'))
+    + campo('s_wpan','Vatios de cada panel','', numInp('s_wpan', s.wpan, 100, 800, 10, 'W'))
     + campo('s_kwp','Campo solar','', '<div class="calc">' + d.kWp.toFixed(2).replace('.',',') + ' kWp</div>'));
 
   h += caja('Ficha del panel y límites del inversor',
-    campo('s_voc','Voc del panel','Tensión en circuito abierto, detrás del panel', numInp('s_voc', s.voc, 10, 90, 0.1))
-    + campo('s_isc','Isc del panel','Corriente de cortocircuito', numInp('s_isc', s.isc, 1, 30, 0.1))
-    + campo('s_vmax','Tensión máxima FV','La que NO se puede pasar nunca', numInp('s_vmax', s.vmax, 60, 1500, 10))
-    + campo('s_vmppt','Mínimo del MPPT','Por debajo no arranca', numInp('s_vmppt', s.vmppt, 20, 400, 5))
-    + campo('s_vmpmax','Máximo del MPPT','', numInp('s_vmpmax', s.vmpmax, 60, 1000, 10))
-    + campo('s_nmppt','Cuántos MPPT','', numInp('s_nmppt', s.nmppt, 1, 4, 1))
-    + campo('s_impp','Corriente máxima por MPPT','', numInp('s_impp', s.impp, 5, 60, 1)));
+    campo('s_voc','Voc del panel','Tensión en circuito abierto, detrás del panel', numInp('s_voc', s.voc, 10, 90, 0.1, 'V'))
+    + campo('s_isc','Isc del panel','Corriente de cortocircuito', numInp('s_isc', s.isc, 1, 30, 0.1, 'A'))
+    + campo('s_vmax','Tensión máxima FV','La que NO se puede pasar nunca', numInp('s_vmax', s.vmax, 60, 1500, 10, 'V'))
+    + campo('s_vmppt','Mínimo del MPPT','Por debajo no arranca', numInp('s_vmppt', s.vmppt, 20, 400, 5, 'V'))
+    + campo('s_vmpmax','Máximo del MPPT','', numInp('s_vmpmax', s.vmpmax, 60, 1000, 10, 'V'))
+    + campo('s_nmppt','Cuántos MPPT','', numInp('s_nmppt', s.nmppt, 1, 4, 1, 'uds'))
+    + campo('s_impp','Corriente máxima por MPPT','', numInp('s_impp', s.impp, 5, 60, 1, 'A')));
 
   /* --- cómo se conectan --- */
   const g = d.cfg;
@@ -401,22 +404,18 @@ function pintarDiseno(){
   const yaVienen = lista.filter(p => p.viene).length;
   const porMirar = lista.filter(p => p.comprobar).length;
   let ult = '', prot = '';
-  if (yaVienen)
-    prot += '<div class="titular"><b>' + yaVienen + ' de estas ya vienen en el inversor</b>'
-      + '<small>Están marcadas abajo. <b>No las metas en el presupuesto</b>, que sería cobrarlas dos veces.</small></div>';
-  lista.forEach(p => {
+  // solo lo que hay que comprar: lo que ya viene estorba en la lista de compra
+  lista.filter(p => !p.viene).forEach(p => {
     if (p.grupo !== ult){ prot += '<div class="sep">' + p.grupo + '</div>'; ult = p.grupo; }
-    const marca = p.viene
-      ? '<span class="pt ok"></span>'
-      : (p.comprobar ? '<span class="pt warn"></span>' : '');
-    prot += fila(marca + p.pieza,
-      p.viene ? 'YA VIENE' : p.valor,
-      p.viene ? '<b>Este inversor ya lo trae de fábrica.</b> No hace falta comprarlo.'
-        : (p.comprobar
-            ? p.nota + ' · <b>Mira el equipo antes de comprarlo</b>: hay inversores que lo traen en el lateral'
-            : p.nota),
-      p.viene ? 'ok' : (p.comprobar ? 'warn' : ''));
+    prot += fila((p.comprobar ? '<span class="pt warn"></span>' : '') + p.pieza, p.valor,
+      p.comprobar
+        ? p.nota + ' · <b>Mira el equipo antes de comprarlo</b>: hay inversores que lo traen en el lateral'
+        : p.nota,
+      p.comprobar ? 'warn' : '');
   });
+  if (yaVienen)
+    prot += '<div class="yatrae"><b>Estas ya vienen en el inversor, no se compran:</b> '
+      + lista.filter(p => p.viene).map(p => p.pieza).join(' · ') + '</div>';
   h += caja('Protecciones que hay que montar', prot,
     'Calculado al 125 % de la corriente de trabajo. Si un valor cae entre dos tamaños comerciales, se coge <b>el inmediatamente superior</b>.'
     + (porMirar ? ' · <b>Las marcadas en ámbar</b> son las que algunos inversores traen de fábrica y otros no: míralo en el equipo antes de comprarlas.' : ''));
@@ -428,7 +427,8 @@ function pintarDiseno(){
     + 'Por eso lo que hay que exigir es <b>≥ 10 kA de poder de corte en CC</b> a la tensión de tu batería. '
     + 'Si la ficha solo da el dato en alterna, <b>no vale</b>.</small></div>'
     + M.sustitutosFusible(d).map(s => fila(
-        '<span class="pt ' + (s.bien ? 'ok' : (s.color === 'bad' ? 'bad' : 'warn')) + '"></span>' + s.n,
+        '<span class="pt ' + (s.bien ? 'ok' : (s.color === 'bad' ? 'bad' : 'warn')) + '"></span>'
+        + s.n + (s.elegido ? ' <span class="elegido">El que usamos</span>' : ''),
         s.v, s.t, s.bien ? 'ok' : (s.color === 'bad' ? 'bad' : 'warn'))).join(''),
     'El BMS de la batería también corta por cortocircuito, y en un equipo bueno corta rápido. '
     + 'Pero <b>el fusible protege el tramo entre el borne y el BMS</b>, y protege también el día que el '
@@ -480,7 +480,7 @@ function pintarDiseno(){
   }
 
   /* lo que el inversor ya lleva por dentro */
-  h += caja('Lo que este inversor ya trae por dentro',
+  h += caja('Lo que este inversor ya trae por dentro (informativo)',
     M.internas(inv).map(([t, n]) => fila('<span class="pt ok"></span>' + t, 'SÍ', n, 'ok')).join(''),
     '<b>Cuidado con esto:</b> la electrónica del inversor protege <b>al inversor</b>. '
     + 'No protege el cable, ni la casa, ni a las personas. Por eso siguen haciendo falta las de arriba, '
@@ -516,13 +516,13 @@ function pintarDiseno(){
         mo.porFila + ' por fila' + (mo.filas>1 ? ' × ' + mo.filas + ' filas' : '') + '. Mídelo antes de prometer nada', 'info');
 
   h += caja('Materiales que hay que llevar',
-    campo('s_dist','Distancia del techo al inversor','En metros', numInp('s_dist', s.dist, 2, 80, 1))
-    + campo('s_filas','Número de filas','', numInp('s_filas', s.filas, 1, 8, 1))
+    campo('s_dist','Distancia del techo al inversor','En metros', numInp('s_dist', s.dist, 2, 80, 1, 'm'))
+    + campo('s_filas','Número de filas','', numInp('s_filas', s.filas, 1, 8, 1, 'filas'))
     + campo('s_techo','Tipo de techo','Cambia mucho el metraje de perfil', sel('s_techo', s.techo,
         [['plano','Plano (hay que hacer triángulos)'],['incl','Inclinado (rieles pegados)']]))
     + campo('s_orient','Cómo se montan','', sel('s_orient', s.orient, [['v','Vertical'],['h','Horizontal']]))
-    + campo('s_plargo','Largo del panel','En metros', numInp('s_plargo', s.plargo, 0.8, 3, 0.01))
-    + campo('s_pancho','Ancho del panel','En metros', numInp('s_pancho', s.pancho, 0.5, 1.5, 0.01))
+    + campo('s_plargo','Largo del panel','En metros', numInp('s_plargo', s.plargo, 0.8, 3, 0.01, 'm'))
+    + campo('s_pancho','Ancho del panel','En metros', numInp('s_pancho', s.pancho, 0.5, 1.5, 0.01, 'm'))
     + mat,
     '<b>Los paneles ya vienen con su cable y su MC4 de fábrica:</b> para conectarlos en serie no hace falta nada, se enchufa uno con el siguiente. Las presillas aprietan solo donde el fabricante marca el marco, nunca sobre el cristal.');
 
@@ -533,6 +533,16 @@ function pintarDiseno(){
       '<div class="titular"><b>' + din(cobro) + '</b>'
       + '<small>Es lo acordado con el cliente <b>solo por el montaje</b>. '
       + 'Si el cliente pregunta por otra cosa, que hable con la oficina.</small></div>');
+
+  /* --- lo que todavía falta por llenar --- */
+  {
+    const pend = M.faltan(t);
+    if (pend.length)
+      h += caja('Te falta por llenar',
+        pend.map(f => fila('<span class="pt warn"></span>' + f.qué, f.donde, f.porqué, 'warn')).join(''),
+        'Mientras falte algo de esto, los números de abajo pueden estar mal. '
+        + '<b>No compres nada hasta tenerlo completo.</b>');
+  }
 
   /* --- comprobaciones --- */
   h += caja('Comprobaciones del diseño',
@@ -1072,8 +1082,38 @@ $('claveInp').addEventListener('keydown', e => { if (e.key === 'Enter') confirma
 $('pantClave').addEventListener('click', e => { if (e.target.id === 'pantClave') cerrarClave(); });
 
 /* ═══════════════ eventos ═══════════════ */
+/* Antes de cambiar de pantalla se comprueba si falta algo de lo que la de
+   ahora tenía que dejar resuelto. No bloquea: avisa y deja decidir. */
+let avisado = {};
+function irA(destino){
+  const t = activo();
+  const pend = M.faltan(t).filter(f =>
+    (pantalla === 'visita' && f.donde === 'Visita') ||
+    (pantalla === 'diseno' && (f.donde === 'Diseño' || f.donde === 'Materiales')));
+  const clave = pantalla + '|' + pend.map(f => f.qué).join(',');
+  if (pend.length && !avisado[clave]){
+    avisado[clave] = true;
+    $('faltaLista').innerHTML = pend.map(f =>
+      '<div class="falta-i"><em>' + f.donde + '</em><b>' + f.qué + '</b><span>' + f.porqué + '</span></div>').join('');
+    $('pantFalta').hidden = false;
+    $('pantFalta').dataset.destino = destino;
+    return;
+  }
+  pantalla = destino; window.scrollTo(0,0); pintar();
+}
+
 document.querySelectorAll('.nav button').forEach(b =>
-  b.addEventListener('click', () => { pantalla = b.dataset.p; window.scrollTo(0,0); pintar(); }));
+  b.addEventListener('click', () => irA(b.dataset.p)));
+
+$('faltaVolver').addEventListener('click', () => { $('pantFalta').hidden = true; });
+$('faltaSeguir').addEventListener('click', () => {
+  const d = $('pantFalta').dataset.destino;
+  $('pantFalta').hidden = true;
+  pantalla = d; window.scrollTo(0,0); pintar();
+});
+$('pantFalta').addEventListener('click', ev => {
+  if (ev.target.id === 'pantFalta') $('pantFalta').hidden = true;
+});
 
 $('rolCampo').addEventListener('click', () => {
   S.rol = 'campo';
@@ -1110,6 +1150,7 @@ document.addEventListener('change', ev => {
   const t = activo();
   if (ev.target.id === 's_modeloInv'){
     const I = MODELOS[ev.target.value];
+    if (!ev.target.value){ t.sistema.modeloInv = ''; repinta(); return; }
     t.sistema.modeloInv = ev.target.value;
     if (I && !I.manual){
       t.sistema.pinv = I.kw; t.sistema.vac = I.vac; t.sistema.vmax = I.vmax;
@@ -1120,6 +1161,7 @@ document.addEventListener('change', ev => {
     repinta();
   } else if (ev.target.id === 's_modeloBat'){
     const B = BATS[ev.target.value];
+    if (!ev.target.value){ t.sistema.modeloBat = ''; repinta(); return; }
     t.sistema.modeloBat = ev.target.value;
     if (B && !B.manual){ t.sistema.vbat = B.v; t.sistema.ah = B.ah; t.sistema.abms = B.ides; }
     repinta();
@@ -1142,7 +1184,7 @@ function repinta(){
 
 document.addEventListener('click', ev => {
   const ir = ev.target.closest('[data-ir]');
-  if (ir){ S.activo = ir.dataset.ir; pintar(); return; }
+  if (ir){ S.activo = ir.dataset.ir; avisado = {}; pintar(); return; }
   if (ev.target.id === 'btnNuevo'){ nuevoTrabajo(); pintar(); window.scrollTo(0,0); return; }
   if (ev.target.id === 'btnActualizar'){
     const msg = t => { const e = $('msgAct'); if (e) e.textContent = t; };

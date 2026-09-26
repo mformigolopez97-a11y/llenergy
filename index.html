@@ -95,6 +95,9 @@ main{padding:16px 16px calc(var(--nav) + env(safe-area-inset-bottom) + 26px);
   text-transform:uppercase; letter-spacing:.14em; color:var(--gris2);
   padding:13px 16px 11px; border-bottom:1px solid var(--linea2)}
 .cuerpo{padding:4px 16px 12px}
+.yatrae{margin:14px -16px -12px; padding:11px 16px; background:var(--verde-s);
+  border-top:1px solid var(--linea); font-size:12.5px; color:var(--gris); line-height:1.5}
+.yatrae b{color:var(--verde); font-weight:600}
 .pista{font-size:13px; color:var(--gris); padding:12px 16px 14px; line-height:1.55;
   border-top:1px solid var(--linea2); background:rgba(255,255,255,.012)}
 .pista b{color:var(--blanco); font-weight:600}
@@ -116,6 +119,11 @@ main{padding:16px 16px calc(var(--nav) + env(safe-area-inset-bottom) + 26px);
 .campo.ancho input,.campo.ancho textarea,.campo.ancho select{text-align:left;
   font-family:"IBM Plex Sans",sans-serif; font-weight:400}
 .campo textarea{min-height:80px; resize:vertical; line-height:1.5}
+.uni{position:relative; display:block}
+.uni input{padding-right:42px !important; width:100%}
+.uni span{position:absolute; right:11px; top:50%; transform:translateY(-50%);
+  font-family:"IBM Plex Mono",monospace; font-size:12px; font-weight:600;
+  color:var(--gris2); pointer-events:none; letter-spacing:.02em}
 .campo .calc{text-align:right; font-family:"IBM Plex Mono",monospace; font-weight:700;
   font-size:14px; color:var(--verde); white-space:nowrap}
 input::placeholder,textarea::placeholder{color:var(--gris2)}
@@ -137,6 +145,9 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   margin:14px -16px 0; padding:10px 16px 8px;
   border-top:1px solid var(--linea); border-bottom:1px solid var(--linea2)}
 .ok{color:var(--verde)} .warn{color:var(--ambar)} .bad{color:var(--rojo)} .info{color:var(--menta)}
+.elegido{font-family:"IBM Plex Mono",monospace; font-size:9px; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase; background:var(--verde);
+  color:#04160C; border-radius:5px; padding:3px 7px; margin-left:6px; vertical-align:1px}
 .mini{border:1px solid var(--linea); background:var(--panel2); color:var(--gris);
   border-radius:7px; padding:3px 9px; font-size:11.5px; font-weight:600; margin-left:8px}
 .mini:hover{color:var(--rojo); border-color:var(--rojo)}
@@ -221,6 +232,12 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   font-weight:700; text-align:center; letter-spacing:.35em; padding:14px 10px;
   border:1px solid var(--linea); border-radius:11px; background:var(--panel2);
   color:var(--blanco)}
+.clave .falta-i{padding:9px 0; border-bottom:1px solid var(--linea2)}
+.clave .falta-i:last-child{border-bottom:none}
+.clave .falta-i b{display:block; font-size:15px; color:var(--blanco)}
+.clave .falta-i span{display:block; font-size:12.5px; color:var(--gris); margin-top:3px; line-height:1.45}
+.clave .falta-i em{font-family:"IBM Plex Mono",monospace; font-style:normal; font-size:9.5px;
+  font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ambar)}
 .clave .msg{font-size:13px; color:var(--rojo); margin-top:11px; min-height:18px; font-weight:600}
 .clave .acciones{display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:16px}
 .clave .acciones .btn{margin-top:0}
@@ -399,6 +416,17 @@ body.escribiendo .nav{transform:translateY(120%); pointer-events:none}
     <button type="button" id="cotCerrar">Cerrar</button>
   </div>
   <div id="cotCuerpo"></div>
+</div>
+
+<div class="clave" id="pantFalta" hidden>
+  <div class="caja-c" style="text-align:left; max-width:380px">
+    <h3 style="color:var(--ambar)">Te falta por llenar</h3>
+    <div id="faltaLista" style="margin:14px 0 4px"></div>
+    <div class="acciones">
+      <button type="button" class="btn gris" id="faltaSeguir">Seguir igual</button>
+      <button type="button" class="btn" id="faltaVolver">Ir a llenarlo</button>
+    </div>
+  </div>
 </div>
 
 <div class="clave" id="pantClave" hidden>

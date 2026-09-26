@@ -361,12 +361,14 @@ export function sustitutosFusible(d){
   const kA = '≥ 10 kA';
   const V = Math.ceil(d.Vbat * 1.4 / 10) * 10;
   return [
-    { n:'Breaker CC de varios polos, en serie', bien:true,
-      v:d.brkDC + ' A · ' + V + ' V CC',
-      t:'<b>La salida más realista en Cuba.</b> Los breakers de continua de 2, 3 o 4 polos se cablean '
-        + 'con <b>todos los polos en serie dentro del mismo circuito</b>: cada polo parte el arco y entre '
-        + 'todos sí lo apagan. El de <b>125 A y 3 polos</b> que te ofrecen a 35 USD es exactamente eso. '
-        + 'Pide que te confirmen el <b>poder de corte en CC</b> y que se puede cablear en serie.' },
+    { n:'Breaker CC de varios polos, cableados en serie', bien:true, elegido:true,
+      v:d.brkDC + ' A · ' + V + ' V CC · 35 USD',
+      t:'<b>Este es el que se usa. Decidido, no es una opción más.</b> '
+        + 'Los breakers de continua de 3 o 4 polos se cablean con <b>todos los polos en serie dentro del '
+        + 'mismo circuito</b>: cada polo parte el arco y entre todos sí lo apagan. '
+        + 'El de <b>125 A y 3 polos a 35 USD</b> es exactamente eso. '
+        + 'Al pedirlo confirma dos cosas: el <b>poder de corte en corriente continua</b> y que el '
+        + 'fabricante admite cablear los polos en serie.' },
     { n:'Fusible MRBF de borne', bien:true,
       v:d.fusT + ' A · 10 kA',
       t:'Se atornilla directo al borne positivo de la batería. Pensado para barcos y para litio, con poder '
@@ -570,4 +572,44 @@ export function panel(trabajos, aj){
     paraMi: ganancia * (100 - socioPct) / 100,
     paraSocia: ganancia * socioPct / 100,
     margen: vendido > 0 ? ganancia / vendido * 100 : 0 };
+}
+
+
+/* ═══════════════ 13 · QUÉ DATOS FALTAN ═══════════════
+   Un dato que falta en el diseño no se nota hasta que estás en el techo
+   con el equipo comprado. Por eso la app avisa antes de dejar pasar. */
+export function faltan(t){
+  const s = t.sistema || {}, L = [];
+  const pon = (donde, qué, porqué) => L.push({ donde, qué, porqué });
+
+  if (!s.modeloInv)
+    pon('Diseño', 'Elegir el inversor',
+      'Sin él no se sabe cuánta tensión aguantan los paneles ni qué protecciones lleva');
+  if (!s.modeloBat)
+    pon('Diseño', 'Elegir la batería',
+      'Sin ella no se puede comprobar si el BMS aguanta lo que pide el inversor');
+  if (!(+s.abms > 0))
+    pon('Diseño', 'Los amperios del BMS',
+      'Es el número que decide si el sistema entrega su potencia o se apaga solo');
+  if (!(+s.voc > 0) || !(+s.isc > 0))
+    pon('Diseño', 'Voc e Isc del panel',
+      'Vienen detrás del panel. Sin ellos no se sabe cuántos caben en serie');
+  if (!(+s.vmax > 0))
+    pon('Diseño', 'Tensión máxima de entrada del inversor',
+      'Es el límite que si se pasa destroza el equipo al primer amanecer frío');
+  if (!(+s.npan > 0))
+    pon('Diseño', 'Cuántos paneles', 'De ahí sale todo el cálculo del campo solar');
+  if (!(+s.dist > 0))
+    pon('Materiales', 'Distancia del techo al inversor',
+      'Hay que medirla en la casa. De ahí salen los metros de cable');
+
+  const v = t.visita || {};
+  if (!String(v.consumo || '').trim())
+    pon('Visita', 'Qué consume la casa',
+      'Sin eso no se puede decir si el equipo le va a dar de verdad');
+  if (v.neutro === 'sin revisar')
+    pon('Visita', 'Estado del neutro',
+      'Es la causa número uno de equipos quemados en Cuba');
+
+  return L;
 }
