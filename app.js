@@ -6,11 +6,11 @@
    ═══════════════════════════════════════════════════════════════════════ */
 
 import * as M from './motor.js';
-import { MODELOS, BATS, PRECIOS, APARATOS } from './datos.js';
+import { MODELOS, BATS, PRECIOS, APARATOS, CAMPOS_INV, CAMPOS_BAT } from './datos.js';
 import { datosCot, htmlCot, empaquetarCot, desempaquetarCot } from './cotizacion.js';
 
 const LS = 'llenergy-v1';
-const VERSION_APP = 'v26';   // sube con cada publicación, junto a la de sw.js
+const VERSION_APP = 'v27';   // sube con cada publicación, junto a la de sw.js
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
@@ -48,7 +48,11 @@ const AJUSTES = { usdCup:705, cambioFecha:'', minPct:18, socioPct:30, fondoPct:3
    hay que poner una clave, aunque sea la primera vez. Antes arrancaba en
    Oficina, y por eso el teléfono del instalador entraba sin nada. */
 let S = { rol:'campo', activo:null, ajustes:{...AJUSTES}, trabajos:[], intentos:[],
-  soloCampo:false };   // los teléfonos que reciben un trabajo por enlace se quedan así para siempre
+  soloCampo:false, abrirConf:'',
+  /* Datos de equipo corregidos a mano, con el aparato delante. Van por clave de
+     modelo y no por trabajo, porque son un hecho del equipo, no de la casa:
+     una vez leída la etiqueta de un MUST 3048, vale para todos los montajes. */
+  equipos:{} };   // los teléfonos que reciben un trabajo por enlace se quedan así para siempre
 
 /* ─────────── candado de Oficina ───────────
    La clave nunca se guarda: se guarda su huella. Quien abra el
@@ -126,6 +130,19 @@ const txtInp = (id, v, ph) =>
 const sel = (id, v, ops) => '<select id="' + id + '">' + ops.map(o =>
   '<option value="' + o[0] + '"' + (String(o[0]) === String(v) ? ' selected' : '') + '>' + o[1]
   + '</option>').join('') + '</select>';
+
+/* Devuelve un equipo con sus datos corregidos a mano encima de los de la base,
+   si es que alguien lo ha tenido delante y ha leido su etiqueta. Ese dato manda
+   siempre sobre el catalogo: el catalogo puede ser de otra generacion del mismo
+   modelo, y ya paso una vez con el MUST de 6 kW (145 V en catalogo, 245 V en la
+   etiqueta del equipo real). */
+function equipo(tabla, clave){
+  const base = tabla[clave];
+  if (!base) return null;
+  const mio = S.equipos && S.equipos[clave];
+  if (!mio || !Object.keys(mio).length) return base;
+  return { ...base, ...mio, ok:true, confirmado:true };
+}
 
 /* Una nota de equipo. Siempre en rojo y siempre rotulada: aquí es donde
    está lo que no se puede pasar por alto. */
@@ -325,6 +342,131 @@ function pintarVisita(){
   $('p-visita').innerHTML = h;
 }
 
+/* ═══════════════ PRUEBA DE BANCO ═══════════════
+   La recorre el instalador con el sistema montado y antes de irse. Cada
+   punto trae el número que se espera, sacado del cálculo de este sistema,
+   para que compare en vez de adivinar. Hasta que no esté entera y firmada,
+   el trabajo no se puede marcar como montado. */
+function bloqueBanco(t, d, c){
+  const b = M.pruebaBanco(d, c);
+  const hecho = t.banco || {};
+  const n = Object.keys(hecho).filter(k => hecho[k] === true).length;
+  const completo = n >= b.total;
+  const firmado = !!(t.bancoFirma || '').trim();
+
+  let cuerpo = '<div class="titular ' + (completo && firmado ? '' : 'info') + '"><b>'
+    + (completo && firmado ? 'Sistema probado y firmado'
+       : completo ? 'Falta firmar' : n + ' de ' + b.total + ' comprobados')
+    + '</b><small>'
+    + (completo && firmado
+        ? 'Los ' + b.total + ' puntos comprobados y firmado por <b>' + esc(t.bancoFirma)
+          + '</b>. Ya se puede marcar el trabajo como montado.'
+        : 'Desde que el sistema está montado, <b>la avería la pagamos nosotros</b>, no el proveedor. '
+          + 'Casi todo lo que se rompe el primer mes se habría visto en esta lista: un borne flojo, '
+          + 'un límite de carga sin poner, una cadena con la polaridad cambiada, un neutro que nadie midió.')
+    + '</small></div>';
+
+  b.grupos.forEach(g => {
+    cuerpo += '<div class="sep">' + g.g + '</div>';
+    g.items.forEach(it => {
+      const si = hecho[it.k] === true;
+      cuerpo += '<label class="chk' + (si ? ' si' : '') + '" for="bc_' + it.k + '">'
+        + '<input type="checkbox" id="bc_' + it.k + '"' + (si ? ' checked' : '') + '>'
+        + '<span class="d"><span class="n">' + esc(it.n) + '</span>'
+        + '<span class="esp">Se espera: ' + esc(it.esp) + '</span>'
+        + '<span class="q">' + it.q + '</span></span></label>';
+    });
+  });
+
+  cuerpo += '<div class="sep">Firma</div>'
+    + campo('t_bancoFirma','Quién hizo la prueba',
+        'El nombre de quien la recorrió punto por punto',
+        txtInp('t_bancoFirma', t.bancoFirma || '', 'Nombre del instalador'), true)
+    + campo('t_bancoFecha','Cuándo','',
+        '<input type="date" id="t_bancoFecha" value="' + esc(t.bancoFecha || '') + '">');
+
+  return caja('Prueba de banco <span class="cont' + (completo ? ' ok' : '') + '">'
+      + n + '/' + b.total + '</span>', cuerpo,
+    'Se recorre <b>con el sistema montado y antes de irte de la casa</b>. Cada punto trae el '
+    + 'número que tiene que dar, sacado del cálculo de este sistema en concreto. '
+    + 'Si uno no cuadra, se arregla ahí mismo: volver cuesta un viaje a El Cobre.');
+}
+
+/* ═══════════════ CONFIRMAR LOS DATOS DE UN EQUIPO ═══════════════
+   Para cuando Marcos tiene el aparato delante. Lo que meta aquí sustituye al
+   catálogo para siempre y en todos los trabajos, porque es un hecho del
+   equipo, no de la casa. Los campos vienen rellenos con lo que dice la base,
+   para que se vea qué hay que comprobar y no haya que teclearlo todo. */
+const idc = (clave, campo) => 'eqc~' + clave + '~' + campo;
+
+/* Cuando cambian los datos de un equipo, hay que volcarlos al trabajo abierto:
+   si no, la pantalla ensena el dato corregido pero el calculo sigue usando el
+   viejo, que es la peor de las dos situaciones posibles. */
+function volcarEquipos(t){
+  if (!t) return;
+  const I = equipo(MODELOS, t.sistema.modeloInv);
+  if (I && !I.manual){
+    t.sistema.pinv = I.kw; t.sistema.vac = I.vac; t.sistema.vmax = I.vmax;
+    t.sistema.vmppt = I.vmin; t.sistema.vmpmax = I.vmpmax;
+    t.sistema.nmppt = I.nmppt; t.sistema.impp = I.impp;
+    if (I.icar) t.sistema.icar = I.icar;
+  }
+  const B = equipo(BATS, t.sistema.modeloBat);
+  if (B && !B.manual){
+    t.sistema.vbat = B.v; t.sistema.ah = B.ah; t.sistema.abms = B.ides;
+  }
+  guardar();
+}
+
+function bloqueConfirmar(clave, eq, campos, qué){
+  if (!clave || !eq || eq.manual) return '';
+  const guard = (S.equipos && S.equipos[clave]) || {};
+  const tocados = Object.keys(guard).length;
+  const abierto = !eq.ok || tocados > 0 || S.abrirConf === clave;
+
+  const filas = campos.map(c => {
+    const puesto = guard[c.k] !== undefined;
+    const valor = puesto ? guard[c.k] : (eq[c.k] !== undefined && eq[c.k] !== 0 ? eq[c.k] : '');
+    return '<div class="conf' + (puesto ? ' puesto' : '') + '">'
+      + '<label for="' + idc(clave, c.k) + '">' + esc(c.n)
+      + '<span class="et">En la etiqueta: ' + esc(c.et) + '</span>'
+      + '<small>' + c.ay + '</small></label>'
+      + '<div class="uni"><input type="number" id="' + idc(clave, c.k) + '" value="' + valor + '"'
+      + ' min="' + c.min + '" max="' + c.max + '" step="' + c.paso + '"'
+      + ' inputmode="decimal" placeholder="—"><span>' + c.u + '</span></div></div>';
+  }).join('');
+
+  return caja('Confirmar los datos ' + qué
+      + (tocados ? ' <span class="cont ok">' + tocados + '</span>' : ''),
+    '<div class="titular ' + (eq.confirmado ? '' : (eq.ok ? 'info' : 'rojo')) + '"><b>'
+    + (eq.confirmado ? 'Confirmado por ti'
+       : eq.ok ? 'Datos de ficha verificada' : 'Datos sin confirmar')
+    + '</b><small>'
+    + (eq.confirmado
+        ? 'Has corregido <b>' + tocados + (tocados === 1 ? ' dato</b> de este equipo con él delante. '
+            : ' datos</b> de este equipo con él delante. ')
+          + 'Lo que pusiste manda sobre el catálogo, en este trabajo y en todos los demás.'
+       : eq.ok
+        ? 'Estos números salen de una ficha que se leyó de verdad, no de memoria. Aun así, '
+          + '<b>si tienes el equipo delante, comprueba la etiqueta</b>: un mismo modelo puede '
+          + 'tener dos generaciones con números distintos.'
+        : '<b>Estos números salen de un catálogo que puede no ser el de tu equipo.</b> '
+          + 'Ya pasó con el MUST de 6 kW: el catálogo decía 145 V de entrada de paneles y la '
+          + 'etiqueta del equipo real decía 245 V. Con paneles de 46 V, eso es la diferencia '
+          + 'entre poner dos en serie o poner cuatro.')
+    + '</small></div>'
+    + (abierto ? filas
+       : '<button type="button" class="btn ghost" data-abrirconf="' + clave + '">Corregir estos datos a mano</button>')
+    + (tocados
+        ? '<button type="button" class="btn peligro" data-olvidarconf="' + clave + '" style="margin-top:12px">'
+          + 'Olvidar mis correcciones y volver al catálogo</button>' : ''),
+    abierto
+      ? 'Lee la etiqueta del equipo, no el anuncio de la tienda ni la caja. Lo que dejes en blanco '
+        + 'sigue saliendo del catálogo. <b>Esto se guarda para siempre y vale para todos los '
+        + 'trabajos</b>, así que hazlo una vez y bien.'
+      : 'Si alguna vez tienes este equipo delante y la etiqueta dice otra cosa, cámbialo aquí.');
+}
+
 /* ═══════════════ PROBLEMAS DE ALTO RIESGO ═══════════════
    Esta caja se llena sola con lo que el técnico anotó. Lo rojo no se monta
    hasta resolverlo, o el cliente firma que lo asume y que la garantía no
@@ -499,8 +641,8 @@ function bloqueKit(t){
 function pintarDiseno(){
   const t = activo(), s = t.sistema, e = sistemaDe(t);
   const d = M.dimensionar(e);
-  const inv = MODELOS[s.modeloInv] || MODELOS.manual;
-  const bat = BATS[s.modeloBat] || BATS.manual;
+  const inv = equipo(MODELOS, s.modeloInv) || MODELOS.manual;
+  const bat = equipo(BATS, s.modeloBat) || BATS.manual;
 
   const grupos = tabla => {
     const g = {};
@@ -534,6 +676,9 @@ function pintarDiseno(){
     + (bat.ficha ? '<div class="fila"><span class="tx">Ficha de la batería</span>'
         + '<a class="vl" href="'+bat.ficha+'" target="_blank" rel="noopener">Abrir</a></div>' : '')
     + nota(bat.nota));
+
+  h += bloqueConfirmar(s.modeloInv, inv, CAMPOS_INV, 'del inversor');
+  h += bloqueConfirmar(s.modeloBat, bat, CAMPOS_BAT, 'de la batería');
 
   h += caja('Números del sistema',
     campo('s_pinv','Potencia del inversor','En kW', numInp('s_pinv', s.pinv, 1, 30, 0.1, 'kW'))
@@ -727,6 +872,11 @@ function pintarDiseno(){
     '<b>Cuidado con esto:</b> la electrónica del inversor protege <b>al inversor</b>. '
     + 'No protege el cable, ni la casa, ni a las personas. Por eso siguen haciendo falta las de arriba, '
     + 'salvo las que aparezcan marcadas como «ya viene».');
+
+  /* La prueba de banco sale cuando el trabajo ya está aceptado: antes no hay
+     nada que probar, y después es lo último que se hace en la casa. */
+  if (t.estado === 'aceptado' || t.estado === 'montado')
+    h += bloqueBanco(t, d, c);
 
   /* --- materiales --- */
   const mo = M.montaje(e), cx = M.conexion(d, e);
@@ -1230,8 +1380,19 @@ $('cotImprimir').addEventListener('click', () => window.print());
    ni reparto. Aunque el instalador entre en Oficina, ahí no hay nada tuyo. */
 
 function empaquetar(t){
+  /* Van tambien los datos de equipo confirmados a mano, pero SOLO los de los
+     dos equipos de este trabajo: el telefono del instalador no tiene por que
+     recibir el catalogo entero corregido, y el enlace no puede crecer sin
+     limite. Sin esto, el instalador calcularia con los numeros del catalogo
+     mientras Marcos calcula con los de la etiqueta, y saldrian cosas distintas. */
+  const eq = {};
+  [t.sistema.modeloInv, t.sistema.modeloBat].forEach(k => {
+    const c = S.equipos && S.equipos[k];
+    if (k && c && Object.keys(c).length) eq[k] = c;
+  });
   const p = { v:1, n:t.nombre, z:t.zona, s:t.sistema, vi:t.visita,
     mo: num(t.dinero.cobroMontaje) };
+  if (Object.keys(eq).length) p.eq = eq;
   // se comprime en base64 para que el enlace no sea eterno
   const txt = JSON.stringify(p);
   const bytes = new TextEncoder().encode(txt);
@@ -1286,6 +1447,12 @@ function mirarEnlace(){
   t.visita  = { ...VISITA,  ...(p.vi||{}) };
   t.dinero  = { ...DINERO, cobroMontaje: p.mo || 0 };
   t.recibido = true;
+  /* Los datos de equipo que Marcos confirmo con el aparato delante viajan con
+     el trabajo, para que el instalador calcule con los mismos numeros. */
+  if (p.eq){
+    S.equipos = S.equipos || {};
+    Object.entries(p.eq).forEach(([k, v]) => { S.equipos[k] = { ...(S.equipos[k]||{}), ...v }; });
+  }
   guardar();
 }
 
@@ -1406,6 +1573,25 @@ document.addEventListener('input', ev => {
        no se repinta se queda mostrando algo que ya no es verdad. */
     t.visita[clave] = ev.target.value; repinta();
   }
+  else if (id.startsWith('bc_')){
+    const k = id.slice(3);
+    t.banco = t.banco || {};
+    if (ev.target.checked) t.banco[k] = true; else delete t.banco[k];
+    repinta();
+  }
+  else if (id.startsWith('eqc~')){
+    /* Un dato de equipo leido de la etiqueta. Vacio = vuelve al catalogo. */
+    const [, clave, campo] = id.split('~');
+    if (!clave || !campo) return;
+    S.equipos = S.equipos || {};
+    const g = S.equipos[clave] = S.equipos[clave] || {};
+    const v = ev.target.value.trim();
+    if (v === '') delete g[campo]; else g[campo] = num(v);
+    if (!Object.keys(g).length) delete S.equipos[clave];
+    /* si el equipo esta elegido en este trabajo, sus numeros se vuelcan al sistema */
+    volcarEquipos(activo());
+    repinta();
+  }
   else if (id.startsWith('ap_')){
     /* cuántos hay de un aparato. Un 0 o un campo vacío lo borra del conteo,
        para que no se quede un cero suelto ensuciando la cuenta. */
@@ -1417,14 +1603,15 @@ document.addEventListener('input', ev => {
     repinta();
   }
   else if (id.startsWith('a_') && S.ajustes[clave] !== undefined){ S.ajustes[clave] = ev.target.value; repinta(); }
-  else if (id.startsWith('t_')){ t[clave] = ev.target.value; if (clave==='nombre') $('nmTrabajo').textContent = ev.target.value; guardar(); }
+  else if (id.startsWith('t_')){ t[clave] = ev.target.value;
+    if (clave === 'bancoFirma' || clave === 'bancoFecha'){ guardar(); repinta(); return; } if (clave==='nombre') $('nmTrabajo').textContent = ev.target.value; guardar(); }
 });
 
 /* al elegir un modelo se rellenan sus datos */
 document.addEventListener('change', ev => {
   const t = activo();
   if (ev.target.id === 's_modeloInv'){
-    const I = MODELOS[ev.target.value];
+    const I = equipo(MODELOS, ev.target.value);
     if (!ev.target.value){ t.sistema.modeloInv = ''; repinta(); return; }
     t.sistema.modeloInv = ev.target.value;
     if (I && !I.manual){
@@ -1435,12 +1622,33 @@ document.addEventListener('change', ev => {
     }
     repinta();
   } else if (ev.target.id === 's_modeloBat'){
-    const B = BATS[ev.target.value];
+    const B = equipo(BATS, ev.target.value);
     if (!ev.target.value){ t.sistema.modeloBat = ''; repinta(); return; }
     t.sistema.modeloBat = ev.target.value;
     if (B && !B.manual){ t.sistema.vbat = B.v; t.sistema.ah = B.ah; t.sistema.abms = B.ides; }
     repinta();
-  } else if (ev.target.id === 't_estado'){ t.estado = ev.target.value; repinta(); }
+  } else if (ev.target.id === 't_estado'){
+    /* No se marca un trabajo como montado sin la prueba de banco entera y
+       firmada. Es lo unico que separa un montaje entregado de un montaje que
+       se sabe que funciona, y la averia a partir de aqui la pagamos nosotros. */
+    if (ev.target.value === 'montado' && t.estado !== 'montado'){
+      const e2 = sistemaDe(t), d2 = M.dimensionar(e2);
+      const b = M.pruebaBanco(d2, M.compatibilidad(d2,
+        equipo(MODELOS, t.sistema.modeloInv) || MODELOS.manual,
+        equipo(BATS, t.sistema.modeloBat) || BATS.manual));
+      const n = Object.keys(t.banco || {}).filter(k => t.banco[k] === true).length;
+      const falta = b.total - n;
+      if (falta > 0 || !(t.bancoFirma || '').trim()){
+        alert(falta > 0
+          ? 'Todavía faltan ' + falta + ' puntos de la prueba de banco.\n\n'
+            + 'Está en la pantalla de Diseño, abajo. Recórrela antes de dar el montaje por hecho.'
+          : 'La prueba de banco está completa pero sin firmar.\n\n'
+            + 'Pon quién la hizo, abajo en la pantalla de Diseño.');
+        ev.target.value = t.estado; return;
+      }
+    }
+    t.estado = ev.target.value; repinta();
+  }
   else if (ev.target.id === 't_tipo'){ t.tipo = ev.target.value; repinta(); }
 });
 
@@ -1461,6 +1669,18 @@ document.addEventListener('click', ev => {
   const ir = ev.target.closest('[data-ir]');
   if (ir){ S.activo = ir.dataset.ir; avisado = {}; pintar(); return; }
   if (ev.target.id === 'btnNuevo'){ nuevoTrabajo(); pintar(); window.scrollTo(0,0); return; }
+  const abrirC = ev.target.closest('[data-abrirconf]');
+  if (abrirC){ S.abrirConf = abrirC.dataset.abrirconf; guardar(); repinta(); return; }
+
+  const olvC = ev.target.closest('[data-olvidarconf]');
+  if (olvC){
+    const cl = olvC.dataset.olvidarconf;
+    if (!confirm('Se borran tus correcciones de este equipo y vuelven los datos del catálogo. '
+      + 'Esto afecta a todos los trabajos, no solo a este.')) return;
+    delete S.equipos[cl];
+    if (S.abrirConf === cl) S.abrirConf = '';
+    volcarEquipos(activo()); repinta(); return;
+  }
   if (ev.target.id === 'btnUsarKit'){
     /* Pasa a Diseño SOLO la potencia del inversor y el número de paneles, más
        la batería objetivo apuntada. No elige marca ni modelo: Marcos pidió

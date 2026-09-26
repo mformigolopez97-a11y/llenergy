@@ -1058,3 +1058,96 @@ export function clausulaRiesgo(lista){
       + 'La garantía de Light of Life Energy no cubre las averías que tengan su origen en '
       + 'estos puntos. El resto de la garantía se mantiene íntegra.' };
 }
+
+/* ═══════════════ 14 · PRUEBA DE BANCO ═══════════════
+
+   La lista que el instalador recorre con el sistema ya montado y antes de
+   irse de la casa. No es burocracia: es la diferencia entre entregar un
+   montaje y entregar un montaje que se sabe que funciona.
+
+   Por qué existe: desde que el sistema está montado, la avería la paga
+   Light of Life Energy, no el proveedor. Casi todo lo que se rompe en el
+   primer mes se habría visto en esta lista: un borne flojo, un límite de
+   carga sin poner, una cadena con la polaridad cambiada, un neutro que
+   nadie midió.
+
+   Cada punto trae el número que se espera, sacado del cálculo de este
+   sistema concreto, para que el instalador compare en vez de adivinar.   */
+export function pruebaBanco(d, c, cx){
+  const n1 = x => String(Math.round(x * 10) / 10).replace('.', ',');
+  const G = [];
+  const grupo = (g, items) => G.push({ g, items });
+
+  grupo('Antes de conectar nada', [
+    { k:'neutro', n:'Medir neutro contra tierra con la casa cargada',
+      esp:'por debajo de 3 V',
+      q:'Es la causa número uno de equipos quemados en Cuba. Si pasa de 3 V, no se conecta el inversor hasta arreglarlo.' },
+    { k:'fases', n:'Medir las dos fases contra neutro',
+      esp:'parecidas entre sí',
+      q:'Si una da 140 V y la otra 90 V, el neutro está abierto o flojo. Parar aquí.' },
+    { k:'tierra', n:'Varilla clavada y continuidad hasta el marco de los paneles',
+      esp:'continuidad',
+      q:'Se comprueba con el multímetro en continuidad, del marco del panel más lejano a la varilla.' },
+  ]);
+
+  grupo('La batería', [
+    { k:'vbat', n:'Tensión medida en los bornes',
+      esp:'cerca de ' + n1(d.Vbat) + ' V',
+      q:'Si está muy por debajo, viene descargada de fábrica: cárgala antes de conectarla al inversor.' },
+    { k:'corte', n:'El corte de cortocircuito montado en el positivo',
+      esp:d.brkDC + ' A, a menos de 50 cm del borne',
+      q:'Es lo que protege el cable de batería. Cuanto más cerca del borne, menos cable queda sin proteger.' },
+    { k:'bornes', n:'Bornes apretados y sin verdín',
+      esp:'apretados a mano firme',
+      q:'Un borne flojo calienta, y donde calienta acaba abriendo. Vuelve a apretarlos a los tres meses.' },
+    { k:'bms', n:'El BMS no da alarmas',
+      esp:'sin alarma',
+      q:'Si la batería tiene pantalla o aplicación, mira que no haya celda desbalanceada ni alarma de temperatura.' },
+  ]);
+
+  grupo('El inversor, en su menú', [
+    { k:'litio', n:'Tipo de batería puesto en LITIO o USER',
+      esp:'LITIO / USER',
+      q:'Si se queda en plomo, carga a voltajes que no son los de esta batería.' },
+    { k:'absor', n:'Voltaje de absorción',
+      esp:c && c.vOK ? n1(c.vAbs) + ' V' : 'según la batería',
+      q:'Es el voltaje al que se da por llena. Este sale de las celdas que tiene tu batería.' },
+    { k:'flot', n:'Voltaje de flotación',
+      esp:c && c.vOK ? n1(c.vFlo) + ' V' : 'según la batería',
+      q:'Donde se queda una vez llena.' },
+    { k:'bajo', n:'Corte por baja',
+      esp:c && c.vOK ? n1(c.vMin) + ' V' : 'según la batería',
+      q:'Por debajo de aquí el inversor apaga para no dejar la batería seca.' },
+    { k:'icarga', n:'Límite de corriente de carga',
+      esp:c && c.limiteCarga ? c.limiteCarga + ' A' : 'lo que admita el BMS',
+      q:'<b>Este es el que más se olvida.</b> Si se queda en el máximo del inversor, el BMS corta la carga a cada rato y el cliente cree que el sistema está roto.' },
+  ]);
+
+  grupo('Los paneles', [
+    { k:'polaridad', n:'Polaridad comprobada antes de enchufar al MPPT',
+      esp:'rojo con rojo',
+      q:'Enchufar una cadena al revés puede matar la entrada solar de golpe, y eso no lo cubre nadie.' },
+    { k:'voc', n:'Voc de cada cadena medida al sol',
+      esp:'cerca de ' + Math.round(d.Vstring) + ' V',
+      q:'Es el voltaje calculado en frío para ' + d.serie + ' paneles en serie. Al sol y con calor dará algo menos: lo que no puede es pasarse.' },
+    { k:'cadenas', n:'Todas las cadenas dan parecido',
+      esp:'sin diferencias grandes',
+      q:d.strings > 1 ? 'Con ' + d.strings + ' cadenas, si una da bastante menos hay un conector mal crimpado o un panel en sombra.'
+        : 'Con una sola cadena, compárala con lo calculado.' },
+  ]);
+
+  grupo('La prueba de verdad', [
+    { k:'corte_red', n:'Se quita la red y las cargas siguen',
+      esp:'sin parpadeo',
+      q:'Es lo que el cliente va a probar el primer día. Hazlo tú antes que él.' },
+    { k:'arranque', n:'Arrancar el motor más grande de la casa con la red quitada',
+      esp:'sin que el inversor se apague',
+      q:'La bomba o la nevera. Si el inversor se traba aquí, el sistema está mal dimensionado y hay que decirlo ahora, no dentro de un mes.' },
+    { k:'vacio', n:'Consumo en vacío anotado',
+      esp:'apuntar el número',
+      q:'Con todo apagado, lo que gasta el propio inversor. Sirve para saber después si algo cambió.' },
+  ]);
+
+  const total = G.reduce((s, x) => s + x.items.length, 0);
+  return { grupos: G, total };
+}

@@ -19,7 +19,7 @@
       señal se ve siempre lo último; sin señal se abre igual al instante.
    ═══════════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'llenergy-v26';
+const VERSION = 'llenergy-v27';
 
 const ARCHIVOS = [
   './',

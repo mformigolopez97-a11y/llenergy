@@ -271,3 +271,63 @@ export const APARATOS = {
   soldadora:   {g:'Negocio', n:'Soldadora eléctrica pequeña', w:3500, arr:2, h:0.5, hn:0, p:true,
     av:'<b>No la pongas en el sistema solar.</b> Tira 3.500 W a golpes y con picos del doble: apaga el inversor y con el tiempo lo mata. Va en la red, con su propio breaker.'},
 };
+
+/* ═══════════════════════════════════════════════════════════════════════
+   QUÉ DATO HAY QUE CONFIRMAR EN CADA EQUIPO, Y DÓNDE MIRARLO
+
+   Muchos equipos de la base llevan `ok:false`: sus números salen de un
+   catálogo que puede no corresponder al equipo que hay en la mano. El caso
+   que lo demostró fue el MUST PV33-6048 TLV: el catálogo dice 145 V de
+   entrada de paneles y la etiqueta del equipo real dice 245 V. Con paneles
+   de 46 V, eso es la diferencia entre poner dos en serie o poner cuatro.
+
+   Esta tabla dice qué campos se pueden corregir a mano y, sobre todo,
+   CÓMO SE LLAMAN EN LA ETIQUETA, que casi nunca es como los llamamos aquí.
+   ═══════════════════════════════════════════════════════════════════════ */
+export const CAMPOS_INV = [
+  { k:'vmax', n:'Tensión máxima de paneles', u:'V', min:50, max:1000, paso:1,
+    et:'Max. PV Array Open Circuit Voltage',
+    ay:'El límite absoluto de la entrada solar. Pasarse de aquí un amanecer frío destroza el equipo, y no lo cubre ninguna garantía.' },
+  { k:'vmin', n:'MPPT mínimo', u:'V', min:10, max:500, paso:1,
+    et:'MPPT Range · el número de abajo',
+    ay:'Por debajo de esta tensión el inversor no arranca a sacar corriente de los paneles.' },
+  { k:'vmpmax', n:'MPPT máximo', u:'V', min:50, max:900, paso:1,
+    et:'MPPT Range · el número de arriba',
+    ay:'Por encima de aquí el seguidor deja de trabajar aunque el equipo aguante la tensión.' },
+  { k:'impp', n:'Corriente máxima por MPPT', u:'A', min:5, max:100, paso:1,
+    et:'Max. PV Input Current / Max. Charging Current from PV',
+    ay:'Cuántos amperios admite cada entrada solar. Manda sobre cuántas cadenas se pueden poner en paralelo.' },
+  { k:'pvmax', n:'Potencia máxima de campo solar', u:'W', min:500, max:30000, paso:100,
+    et:'Max. PV Array Power',
+    ay:'Cuántos vatios de panel admite. Se puede pasar un poco, pero no el doble.' },
+  { k:'icar', n:'Corriente máxima de carga', u:'A', min:5, max:300, paso:5,
+    et:'Max. Battery Charging Current',
+    ay:'Lo más que el inversor puede meterle a la batería. Si es más de lo que admite el BMS, se baja en el menú.' },
+  { k:'pbat', n:'Potencia en modo batería', u:'W', min:500, max:30000, paso:100,
+    et:'Output Power on Battery / Inverter Power',
+    ay:'Muchos híbridos dan menos potencia con la red caída que con la red presente. Si no lo dice, déjalo en blanco.' },
+  { k:'vtope', n:'Corte por sobretensión de batería', u:'V', min:10, max:70, paso:0.1,
+    et:'Battery Over-voltage Protection',
+    ay:'La tensión a la que el inversor corta por proteger la batería. Tiene que estar por encima del voltaje de absorción, o corta la carga antes de tiempo.' },
+];
+
+export const CAMPOS_BAT = [
+  { k:'v', n:'Tensión nominal', u:'V', min:10, max:70, paso:0.1,
+    et:'Nominal Voltage', ay:'51,2 V son 16 celdas; 48 V son 15; 25,6 V son 8.' },
+  { k:'ah', n:'Capacidad', u:'Ah', min:10, max:600, paso:5,
+    et:'Rated Capacity', ay:'Los amperios-hora de la batería, no los kWh.' },
+  { k:'ides', n:'Corriente de descarga del BMS', u:'A', min:10, max:600, paso:5,
+    et:'Max. Continuous Discharge Current',
+    ay:'<b>Este es el número que decide si el sistema da su potencia o se apaga solo.</b> Está en el manual de dentro de la caja, no siempre en la pegatina de fuera.' },
+  { k:'icar', n:'Corriente de carga del BMS', u:'A', min:5, max:400, paso:5,
+    et:'Max. Continuous Charge Current',
+    ay:'Lo más que se le puede meter. Suele ser la mitad que la de descarga.' },
+  { k:'vcar', n:'Voltaje de carga completa', u:'V', min:10, max:80, paso:0.1,
+    et:'Charge Cut-off Voltage',
+    ay:'A cuánto se da por llena. Si no lo dice, se calcula a 3,55 V por celda.' },
+  { k:'vflo', n:'Voltaje de flotación', u:'V', min:10, max:80, paso:0.1,
+    et:'Float Voltage', ay:'Donde se queda una vez llena. Unos 3,40 V por celda.' },
+  { k:'vmin', n:'Corte por baja', u:'V', min:10, max:70, paso:0.1,
+    et:'Discharge Cut-off Voltage',
+    ay:'Donde el BMS corta para no dejarla seca. Unos 2,90 V por celda.' },
+];

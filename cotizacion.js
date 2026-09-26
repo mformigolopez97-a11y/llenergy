@@ -138,8 +138,41 @@ export function htmlCot(c){
   <ul class="lista">${prot}</ul>
 
   <h2>Garantía</h2>
-  <p class="cuerpo"><b>${c.garantia} meses</b> sobre los equipos instalados y sobre
-  el trabajo de instalación, a partir de la puesta en marcha.</p>
+  <p class="cuerpo"><b>${c.garantia} meses</b> sobre los equipos instalados y sobre el
+  trabajo de instalación, contados desde la puesta en marcha, no desde la compra.</p>
+
+  <p class="cuerpo"><b>Qué cubre.</b> Cualquier fallo del inversor, de la batería, de los
+  paneles o de las protecciones que no venga de un uso indebido. Cubre también el trabajo:
+  si hay que volver a subir al techo o rehacer una conexión, no se cobra.</p>
+
+  <p class="cuerpo"><b>Qué no cubre.</b> Un rayo directo sobre la casa. La manipulación por
+  parte de otra persona. Los aparatos propios de la vivienda y los daños que provoquen al
+  sistema. Las baterías trabajando fuera de su rango de temperatura. Y los puntos que usted
+  haya firmado más arriba, si los hubiera.</p>
+
+  <p class="cuerpo"><b>Cómo se responde, y quién.</b> Si un equipo llega defectuoso de
+  fábrica, lo reemplaza el proveedor antes de montarlo. <b>A partir del momento en que el
+  sistema queda montado y funcionando, respondemos nosotros</b>, durante los
+  ${c.garantia} meses. Por eso el sistema no se da por entregado hasta que se ha recorrido
+  y firmado la prueba de puesta en marcha, punto por punto.</p>
+
+  <h2>Mantenimiento</h2>
+  <p class="cuerpo">Un sistema solar no se cuida solo. Estos tres repasos son los que
+  mantienen la garantía viva y, sobre todo, los que evitan que algo se rompa:</p>
+  <ul class="lista">
+    <li><b>A los 3 meses.</b> Volver a apretar los bornes de la batería y del inversor. El
+      cobre se asienta con los ciclos de calor, y un borne que quedó bien el primer día
+      puede estar flojo al tercer mes. Esta visita la hacemos nosotros, sin cargo.</li>
+    <li><b>Cada 6 meses.</b> Limpiar los paneles con agua y un paño suave, de mañana
+      temprano o al atardecer, nunca con el panel caliente al sol. El polvo y el salitre
+      pueden costar más de un 10 % de producción. Esto lo puede hacer usted.</li>
+    <li><b>Una vez al año.</b> Revisión completa: apriete de todas las conexiones, estado
+      de las protecciones, medida del neutro y de la tierra, y comprobación de que la
+      batería sigue dando su capacidad. Esta visita la hacemos nosotros.</li>
+  </ul>
+  <p class="cuerpo">Si en algún momento el sistema se comporta distinto (se apaga, tarda
+  más en cargar, la batería dura menos), <b>avísenos antes de que se rompa algo</b>. Casi
+  siempre es un ajuste.</p>
 
   ${c.clausula ? `<h2>Puntos de su instalación que usted asume</h2>
   <p class="cuerpo">En la visita se encontraron <b>${c.clausula.n}
