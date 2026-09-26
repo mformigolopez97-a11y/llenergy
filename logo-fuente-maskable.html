@@ -1,0 +1,97 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0;background:transparent}
+  #lienzo{width:100vw;height:100vw}
+  svg{display:block;width:100%;height:100%}
+</style></head><body><div id="lienzo">
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gTile" gradientUnits="userSpaceOnUse" x1="180" y1="120" x2="800" y2="920">
+      <stop offset="0"    stop-color="#272E38"/>
+      <stop offset="0.55" stop-color="#1C222B"/>
+      <stop offset="1"    stop-color="#151A21"/>
+    </linearGradient>
+
+    <!-- El sol. Mas amarillo arriba a la derecha, mas naranja abajo a la izquierda. -->
+    <linearGradient id="gSol" gradientUnits="userSpaceOnUse" x1="392" y1="588" x2="658" y2="282">
+      <stop offset="0"    stop-color="#EE6510"/>
+      <stop offset="0.42" stop-color="#FA9616"/>
+      <stop offset="0.78" stop-color="#FFBE2E"/>
+      <stop offset="1"    stop-color="#FFD84E"/>
+    </linearGradient>
+
+    <!-- Los rayos, en coordenadas absolutas: en caja relativa no pintan los
+         rayos rectos, porque su caja tiene altura o anchura cero. -->
+    <linearGradient id="gRayo" gradientUnits="userSpaceOnUse" x1="512" y1="490" x2="512" y2="140">
+      <stop offset="0" stop-color="#F98A12"/>
+      <stop offset="1" stop-color="#FFCF48"/>
+    </linearGradient>
+
+    <linearGradient id="gHoja1" gradientUnits="userSpaceOnUse" x1="250" y1="630" x2="822" y2="446">
+      <stop offset="0"    stop-color="#0D9488"/>
+      <stop offset="0.30" stop-color="#17B672"/>
+      <stop offset="0.62" stop-color="#43D268"/>
+      <stop offset="0.88" stop-color="#9CE97E"/>
+      <stop offset="1"    stop-color="#ECFBC9"/>
+    </linearGradient>
+    <linearGradient id="gHoja2" gradientUnits="userSpaceOnUse" x1="352" y1="700" x2="804" y2="558">
+      <stop offset="0"    stop-color="#0A7A70"/>
+      <stop offset="0.40" stop-color="#119E60"/>
+      <stop offset="0.78" stop-color="#2FC25E"/>
+      <stop offset="1"    stop-color="#7CE283"/>
+    </linearGradient>
+
+    <linearGradient id="gTexto" gradientUnits="userSpaceOnUse" x1="200" y1="720" x2="830" y2="830">
+      <stop offset="0"    stop-color="#FFFFFF"/>
+      <stop offset="0.45" stop-color="#F2F5F8"/>
+      <stop offset="1"    stop-color="#AFBBC7"/>
+    </linearGradient>
+
+    <filter id="brillo" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur stdDeviation="16" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="brilloSol" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="22" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="sombraHoja" x="-20%" y="-30%" width="140%" height="180%">
+      <feDropShadow dx="0" dy="12" stdDeviation="9" flood-color="#04070B" flood-opacity="0.85"/>
+    </filter>
+    <clipPath id="recorte"><rect x="104" y="92" width="816" height="840" rx="196"/></clipPath>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#gTile)"/>
+
+  <g transform="translate(512,512) scale(0.80) translate(-514,-482)">
+    <!-- 7 rayos, uno cada 30 grados: la distancia entre ellos es siempre igual,
+         y los dos de abajo quedan completamente rectos. -->
+    <g stroke="url(#gRayo)" stroke-width="26" stroke-linecap="round" filter="url(#brillo)">
+      <line x1="720" y1="442" x2="804" y2="442"/>
+      <line x1="692" y1="338" x2="765" y2="296"/>
+      <line x1="616" y1="262" x2="658" y2="189"/>
+      <line x1="512" y1="234" x2="512" y2="150"/>
+      <line x1="408" y1="262" x2="366" y2="189"/>
+      <line x1="332" y1="338" x2="259" y2="296"/>
+      <line x1="304" y1="442" x2="220" y2="442"/>
+    </g>
+
+    <!-- El sol entero: las hojas le tapan la mitad de abajo y por eso se lee
+         como un amanecer. -->
+    <circle cx="512" cy="442" r="170" fill="url(#gSol)" filter="url(#brilloSol)"/>
+
+    <!-- La hoja de abajo va primero; la de arriba le hace sombra encima. -->
+    <path d="M 354,650 C 472,592 646,556 806,572 C 728,678 488,714 354,650 Z"
+          fill="url(#gHoja2)"/>
+    <path d="M 238,578 C 378,506 574,450 828,462 C 752,598 466,684 238,578 Z"
+          fill="url(#gHoja1)" filter="url(#sombraHoja)"/>
+
+    <text x="512" y="800" text-anchor="middle" fill="url(#gTexto)"
+          font-family="Archivo, Helvetica, Arial, sans-serif" font-weight="800"
+          font-size="126" letter-spacing="-4">L.L.Energy</text>
+  </g>
+</svg>
+</div></body></html>

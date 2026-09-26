@@ -19,7 +19,7 @@
       señal se ve siempre lo último; sin señal se abre igual al instante.
    ═══════════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'llenergy-v27';
+const VERSION = 'llenergy-v28';
 
 const ARCHIVOS = [
   './',
@@ -31,6 +31,7 @@ const ARCHIVOS = [
   './manifest.webmanifest',
   './icono-192.png',
   './icono-512.png',
+  './icono-maskable.png',
 ];
 
 const ESPERA = 2500;   // lo que se aguanta a la red antes de tirar de lo guardado
