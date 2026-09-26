@@ -10,7 +10,7 @@ import { MODELOS, BATS, PRECIOS } from './datos.js';
 import { datosCot, htmlCot, empaquetarCot, desempaquetarCot } from './cotizacion.js';
 
 const LS = 'llenergy-v1';
-const VERSION_APP = 'v20';   // sube con cada publicación, junto a la de sw.js
+const VERSION_APP = 'v21';   // sube con cada publicación, junto a la de sw.js
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
@@ -42,7 +42,11 @@ const AJUSTES = { usdCup:705, cambioFecha:'', minPct:18, socioPct:30, fondoPct:3
   dispositivo:'',    // de quién es este teléfono, para saber quién intentó entrar
   garantiaMeses:12, validezDias:15 };
 
-let S = { rol:'oficina', activo:null, ajustes:{...AJUSTES}, trabajos:[], intentos:[] };
+/* Una instalación nueva arranca SIEMPRE en Campo. Para entrar en Oficina
+   hay que poner una clave, aunque sea la primera vez. Antes arrancaba en
+   Oficina, y por eso el teléfono del instalador entraba sin nada. */
+let S = { rol:'campo', activo:null, ajustes:{...AJUSTES}, trabajos:[], intentos:[],
+  soloCampo:false };   // los teléfonos que reciben un trabajo por enlace se quedan así para siempre
 
 /* ─────────── candado de Oficina ───────────
    La clave nunca se guarda: se guarda su huella. Quien abra el
@@ -58,7 +62,9 @@ async function huella(txt){
   return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2,'0')).join('');
 }
 const hayClave = () => !!S.ajustes.claveHash;
-const puedeOficina = () => !hayClave() || abierto;
+/* Solo se entra en Oficina si este teléfono tiene clave Y se ha abierto en
+   esta sesión. Sin clave no se entra: hay que ponerla primero. */
+const puedeOficina = () => !S.soloCampo && hayClave() && abierto;
 
 function marcarAbierto(v){
   abierto = v;
@@ -79,7 +85,7 @@ function cargar(){
   } catch(e){ /* si el guardado está corrupto, se empieza limpio */ }
   if (!S.trabajos.length) nuevoTrabajo('Ejemplo · casa de El Cobre', 'El Cobre, Santiago', true);
   if (!S.trabajos.find(t => t.id === S.activo)) S.activo = S.trabajos[0].id;
-  if (hayClave() && !abierto) S.rol = 'campo';
+  if (!puedeOficina()) S.rol = 'campo';
 }
 function guardar(){ try { localStorage.setItem(LS, JSON.stringify(S)); } catch(e){} }
 
@@ -782,7 +788,15 @@ function pintarAjustes(){
   const a = S.ajustes;
 
   if (S.rol === 'campo'){
-    $('p-ajustes').innerHTML = caja('Este teléfono',
+    $('p-ajustes').innerHTML =
+      (S.soloCampo
+        ? caja('Este teléfono es de campo',
+            '<div class="titular info"><b>Solo trabajo de campo</b>'
+            + '<small>Este teléfono recibió un trabajo por enlace, así que se quedó configurado para el '
+            + 'techo: equipos, protecciones y materiales. <b>Los costes y el reparto no se ven desde aquí</b>, '
+            + 'y no es un fallo.</small></div>')
+        : '')
+      + caja('Este teléfono',
       campo('a_dispositivo','¿De quién es este teléfono?',
         'Para saber de qué aparato salen los avisos',
         txtInp('a_dispositivo', a.dispositivo, 'Yunior · teléfono'), true))
@@ -874,6 +888,7 @@ function pintar(){
   $('rolCampo').setAttribute('aria-pressed', S.rol === 'campo');
   $('rolOficina').setAttribute('aria-pressed', S.rol === 'oficina');
   $('candado').hidden = puedeOficina();
+  $('rolOficina').hidden = S.soloCampo;
   $('navDinero').hidden = S.rol === 'campo';
   if (S.rol === 'campo' && pantalla === 'dinero') pantalla = 'diseno';
 
@@ -992,6 +1007,10 @@ function mirarEnlace(){
   history.replaceState(null, '', location.pathname);
   if (!p) return alert('Ese enlace no se pudo leer. Pide que te lo manden otra vez entero.');
   if (!confirm('¿Guardar el trabajo «' + p.n + '»' + (p.z ? ' de ' + p.z : '') + '?')) return;
+  // quien recibe un trabajo por enlace es el instalador: ese teléfono
+  // se queda en Campo para siempre, sin botón de Oficina
+  S.soloCampo = true;
+  S.rol = 'campo';
   const t = nuevoTrabajo(p.n, p.z);
   t.sistema = { ...SISTEMA, ...(p.s||{}) };
   t.visita  = { ...VISITA,  ...(p.vi||{}) };
@@ -1034,7 +1053,9 @@ async function confirmarClave(){
   if (claveModo === 'poner'){
     if (v.length < 4) return msg('Pon al menos 4 cifras.');
     S.ajustes.claveHash = await huella(v);
-    marcarAbierto(true); cerrarClave(); pintar();
+    marcarAbierto(true);
+    S.rol = 'oficina';   // quien acaba de poner la clave entra directo
+    cerrarClave(); pintar();
     return;
   }
   const ok = (await huella(v)) === S.ajustes.claveHash;
@@ -1060,7 +1081,13 @@ $('rolCampo').addEventListener('click', () => {
   pintar();
 });
 $('rolOficina').addEventListener('click', () => {
-  if (!puedeOficina()) return pedirClave('entrar');
+  if (S.soloCampo){
+    alert('Este teléfono está configurado solo para trabajo de campo.\n\n'
+      + 'Los costes y el reparto no se ven desde aquí.');
+    return;
+  }
+  if (!hayClave()) return pedirClave('poner');   // primera vez: hay que crearla
+  if (!abierto) return pedirClave('entrar');
   S.rol = 'oficina'; pintar();
 });
 $('btnCambiar').addEventListener('click', () => { pantalla = 'trabajos'; window.scrollTo(0,0); pintar(); });
@@ -1206,6 +1233,20 @@ document.addEventListener('change', ev => {
     } catch(e){ alert('No pude leer ese archivo: ' + e.message); }
   };
   fr.readAsText(ev.target.files[0]);
+});
+
+/* Mientras se escribe, fuera la barra de abajo: el teclado la empuja hacia
+   arriba y se monta encima de los botones, que es justo lo que le pasaba a
+   Marcos al intentar borrar un trabajo. */
+const escribible = el => el && /^(INPUT|TEXTAREA)$/.test(el.tagName)
+  && !/^(button|checkbox|radio|submit)$/.test(el.type || '');
+document.addEventListener('focusin', ev => {
+  if (escribible(ev.target)) document.body.classList.add('escribiendo');
+});
+document.addEventListener('focusout', () => {
+  setTimeout(() => {
+    if (!escribible(document.activeElement)) document.body.classList.remove('escribiendo');
+  }, 60);
 });
 
 /* ═══════════════ arranque ═══════════════ */

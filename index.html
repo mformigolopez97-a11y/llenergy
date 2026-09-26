@@ -322,6 +322,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   left:50%; transform:translateX(-50%); width:30px; height:2px;
   background:var(--verde); border-radius:0 0 3px 3px}
 .nav button[hidden]{display:none}
+/* con el teclado abierto la barra estorba: se quita de en medio */
+body.escribiendo .nav{transform:translateY(120%); pointer-events:none}
+.nav{transition:transform .15s ease-out}
+@media (prefers-reduced-motion:reduce){ .nav{transition:none} }
 
 @media (min-width:780px){
   .campo{grid-template-columns:1fr 180px}
