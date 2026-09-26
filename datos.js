@@ -12,8 +12,8 @@
 
 export const BATS={
  'manual':{n:'— Otro / meter los datos a mano —',manual:true},
- 'fintera-5':{n:'Fintera 5 kWh · 51,2 V  (la que usas ahora)',v:51.2,ah:100,ides:100,icar:50,ok:false,ficha:'',
-   nota:'<b>No existe ficha pública de Fintera.</b> El 51,2 V y los 5 kWh son los que tú me diste; los 100 Ah salen de dividir 5.120 Wh entre 51,2 V. Los amperios del BMS <b>no los sé</b>: los he puesto en 100 A de descarga y 50 A de carga porque es lo normal en ese formato, pero <b>no son dato del fabricante</b>. Hazle una foto a la etiqueta lateral y corrige los dos números aquí antes de dimensionar nada.'},
+ 'fintera-5':{n:'Fintra HZR-100-16S · 5,12 kWh · 51,2 V',v:51.2,ah:100,ides:100,icar:50,ok:false,ficha:'',
+   nota:'<b>La marca es Fintra</b> (no Fintera), y el modelo de caja es <b>HZR-100-16S</b>. De la caja y el manual salen confirmados: 51,2 V · 100 Ah · 5.120 Wh · 16 celdas · montaje en pared. <b>Lo que sigue sin confirmar son los amperios del BMS:</b> he puesto 100 A de descarga y 50 A de carga porque es lo normal en ese formato, pero no son dato del fabricante. Están en el manual de usuario que viene en la caja: <b>fotografía la página de especificaciones</b> y se cierra.'},
  'todo-15360':{n:'InfiniSolar INF20-48300PRO · 15,36 kWh · 51,2 V',v:51.2,ah:300,ides:200,icar:200,ok:true,ficha:'',
    nota:'<b>Datos leídos de la etiqueta del equipo</b>, no estimados: 51,2 V · 300 Ah · 15.360 Wh · <b>200 A de carga y 200 A de descarga</b>. A 200 A y 51,2 V puede soltar más de 10 kW, así que le sobra para un inversor de 6 kW. <b>Cuidado con la temperatura:</b> solo carga entre 0 y 45 °C y descarga entre −10 y 45 °C. En un cuarto cerrado sin ventilación pasa de 45 °C y <b>deja de cargar sola</b>: ponla en sitio fresco y aireado, nunca pegada al techo ni al sol.'},
  'pylontech-us5000':{n:'Pylontech US5000C · 4,8 kWh · 48 V',v:48,ah:100,ides:80,icar:80,dod:0.95,
@@ -65,20 +65,30 @@ export const MODELOS={
  'growatt-6000t':{n:'Growatt SPF 6000T · 6 kW split-phase',kw:6,vnom:48,icar:80,vflot:0,vtope:0,pbat:6000,vac:'240',vmax:450,vmin:120,vmpmax:430,nmppt:2,impp:18,ok:false,
    ficha:'https://us.growatt.com/products/spf-3500-5000-us',
    nota:'Salida split-phase 120/240 V, que encaja bien con el bifásico cubano. Confirma en la etiqueta.'},
+ /* ---- iXCEED ----
+    Datos leídos de la etiqueta de la caja, no de catálogo. */
+ 'ixceed-62k':{n:'iXCEED 6.2K48-D120 · 6,2 kW · bifásico',kw:6.2,vnom:48,icar:100,
+   vflot:0,vtope:0,pbat:6200,vac:'240',vmax:500,vmin:120,vmpmax:450,nmppt:1,impp:18,ok:true,ficha:'',
+   nota:'<b>Etiqueta del equipo, no catálogo.</b> Modelo 6.2K48-D120-IP21, bifásico (115/230 V, 50/60 Hz automático). Paneles: hasta <b>500 V</b> en circuito abierto, MPPT de <b>120 a 450 V</b>, <b>18 A</b> máximos de entrada y hasta <b>7.200 W</b> de campo solar — le cabe más panel que su propia potencia, que es bueno para los días nublados. Batería de 48 V: carga <b>100 A</b> desde el sol y <b>60 A</b> desde la red, y <b>descarga hasta 135 A</b>. A 48 V eso son unos 6,5 kW: sí da sus 6,2 kW. Salida 27 A. Aguanta de −10 a 50 °C.'},
+
  /* ---- MUST de fase dividida (serie PV3300 TLV) ----
     Datos de la ficha oficial de MUST, hoja "Low Frequency Split Phase
     Solar Inverter · PV3300 TLV Series (1KW-6KW)". Son de baja frecuencia,
     con transformador: arrancan motores mucho mejor que los de alta. */
  'must-tlv-3024':{trae:['brkAC'],n:'MUST PV33-3024 TLV · 3 kW · bifásico · batería 24 V',kw:3,vnom:24,icar:80,
-   vflot:27,vtope:0,vac:'120',vmax:145,vmin:30,vmpmax:130,nmppt:1,impp:25,ok:true,
+   vflot:27,vtope:0,vac:'120',vmax:145,vmin:30,vmpmax:130,nmppt:1,impp:25,ok:false,
    ficha:'https://www.mustpower.com/product/pv3300-tlv-3kw-6kw/',
-   nota:'<b>Ficha oficial de MUST.</b> Sale en <b>fase dividida</b> (HOT1 + neutro + HOT2), o sea 110/120 V y 220/240 V a la vez: es la topología de la red cubana. Frecuencia ajustable a 60 Hz. <b>Ojo con los paneles: solo aguanta 145 V en circuito abierto</b> y el MPPT regula de 30 a 130 V, así que con paneles de 46 V caben <b>dos en serie, no más</b>. Campo solar máximo 2.500 W, carga 80 A. Arranque de motor 9.000 VA, que es mucho para 3 kW: es de baja frecuencia, con transformador. La corriente máxima de entrada FV no viene en la ficha; he puesto 25 A por el campo máximo, compruébalo.'},
+   nota:'<b>OJO: estos números salen de un catálogo de MUST, y la etiqueta del equipo de 6 kW dice otra cosa</b> (245 V y MPPT de 60 a 230, en vez de 145 y 30-130). Son dos generaciones del mismo producto. <b>Lee la etiqueta de tu unidad antes de cablear.</b> Según el catálogo: sale en <b>fase dividida</b> (HOT1 + neutro + HOT2), o sea 110/120 V y 220/240 V a la vez: es la topología de la red cubana. Frecuencia ajustable a 60 Hz. <b>Ojo con los paneles: solo aguanta 145 V en circuito abierto</b> y el MPPT regula de 30 a 130 V, así que con paneles de 46 V caben <b>dos en serie, no más</b>. Campo solar máximo 2.500 W, carga 80 A. Arranque de motor 9.000 VA, que es mucho para 3 kW: es de baja frecuencia, con transformador. La corriente máxima de entrada FV no viene en la ficha; he puesto 25 A por el campo máximo, compruébalo.'},
  'must-tlv-3048':{trae:['brkAC'],n:'MUST PV33-3048 TLV · 3 kW · bifásico · batería 48 V',kw:3,vnom:48,icar:80,
-   vflot:54,vtope:0,vac:'120',vmax:145,vmin:60,vmpmax:130,nmppt:1,impp:25,ok:true,
+   vflot:54,vtope:0,vac:'120',vmax:145,vmin:60,vmpmax:130,nmppt:1,impp:25,ok:false,
    ficha:'https://www.mustpower.com/product/pv3300-tlv-3kw-6kw/',
    nota:'El mismo de 3 kW pero con batería de <b>48 V</b> en vez de 24 V. Con 48 V el inversor tira la mitad de corriente de la batería, así que el BMS sufre mucho menos. Mismos límites de paneles: 145 V máximo y MPPT de 60 a 130 V.'},
+ 'must-tlv-6048':{trae:['brkAC'],n:'MUST PV33-6048 TLV · 6 kW · bifásico · batería 48 V',kw:6,vnom:48,icar:80,
+   vflot:54,vtope:0,pbat:6000,vac:'240',vmax:245,vmin:60,vmpmax:230,nmppt:1,impp:25,ok:true,
+   ficha:'https://www.mustpower.com/product/pv3300-tlv-3kw-6kw/',
+   nota:'<b>Etiqueta del equipo.</b> Salida bifásica <b>120/240 V</b> a 50/60 Hz, 25 A. Entrada CC de batería <b>147 A</b>. Paneles: <b>245 V</b> máximos en circuito abierto y MPPT de <b>60 a 230 V</b> — con paneles de 46 V caben <b>cuatro en serie</b>. Carga solar 80 A y desde la red 40 A. <b>Ojo: trabaja solo entre 0 y 40 °C</b>, que es un rango estrecho para un cuarto caluroso en Santiago; ponlo donde corra el aire.'},
  'must-tlv-5048':{trae:['brkAC'],n:'MUST PV33-5048 TLV · 5 kW · bifásico · batería 48 V',kw:5,vnom:48,icar:80,
-   vflot:54,vtope:0,vac:'120',vmax:145,vmin:60,vmpmax:130,nmppt:1,impp:30,ok:true,
+   vflot:54,vtope:0,vac:'120',vmax:145,vmin:60,vmpmax:130,nmppt:1,impp:30,ok:false,
    ficha:'https://www.mustpower.com/product/pv3300-tlv-3kw-6kw/',
    nota:'Ficha oficial. Campo solar 5.000 W, arranque 15.000 VA. <b>Mismo tope de 145 V en los paneles</b>: dos en serie con paneles de 46 V.'},
  'must-tlv-1024':{trae:['brkAC'],n:'MUST PV33-1024 TLV · 1 kW · bifásico · batería 24 V',kw:1,vnom:24,icar:60,

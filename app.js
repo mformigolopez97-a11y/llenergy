@@ -10,7 +10,7 @@ import { MODELOS, BATS, PRECIOS } from './datos.js';
 import { datosCot, htmlCot, empaquetarCot, desempaquetarCot } from './cotizacion.js';
 
 const LS = 'llenergy-v1';
-const VERSION_APP = 'v23';   // sube con cada publicación, junto a la de sw.js
+const VERSION_APP = 'v24';   // sube con cada publicación, junto a la de sw.js
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
