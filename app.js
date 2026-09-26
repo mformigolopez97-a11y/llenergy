@@ -6,11 +6,11 @@
    ═══════════════════════════════════════════════════════════════════════ */
 
 import * as M from './motor.js';
-import { MODELOS, BATS, PRECIOS } from './datos.js';
+import { MODELOS, BATS, PRECIOS, APARATOS } from './datos.js';
 import { datosCot, htmlCot, empaquetarCot, desempaquetarCot } from './cotizacion.js';
 
 const LS = 'llenergy-v1';
-const VERSION_APP = 'v24';   // sube con cada publicación, junto a la de sw.js
+const VERSION_APP = 'v25';   // sube con cada publicación, junto a la de sw.js
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
@@ -34,8 +34,10 @@ const DINERO = { kit:0, ppan:0, prot:0, cab:0, estr:0, obra:0, trans:0, precio:0
 const DINERO_EJEMPLO = { kit:2500, ppan:180, prot:600, cab:180, estr:200, obra:300, trans:80,
   precio:5800, cobroMontaje:650 };
 
-const VISITA = { consumo:'', tipoTecho:'plano', orientacion:'sur', sombras:'no',
-  neutro:'sin revisar', equiposCasa:'', pide:'', puede:'', extra:'', notas:'' };
+const VISITA = { cita:'', direccion:'', quienVa:'', comoLlegar:'',
+  consumo:'', tipoTecho:'plano', orientacion:'sur', sombras:'no',
+  neutro:'sin revisar', equiposCasa:'', pide:'', puede:'', extra:'', notas:'',
+  aparatos:{}, objetivoKWh:0 };   // aparatos: {claveDelAparato: cuántos hay} · sale de la tabla APARATOS
 
 const AJUSTES = { usdCup:705, cambioFecha:'', minPct:18, socioPct:30, fondoPct:3, capital:0,
   claveHash:'',      // de la clave solo se guarda su huella, nunca la clave
@@ -92,7 +94,7 @@ function guardar(){ try { localStorage.setItem(LS, JSON.stringify(S)); } catch(e
 function nuevoTrabajo(nombre, zona, ejemplo){
   const t = { id:'t'+Date.now()+Math.random().toString(36).slice(2,6),
     nombre: nombre || 'Trabajo nuevo', zona: zona || '', contacto:'',
-    estado:'visita', ejemplo: !!ejemplo,
+    estado:'agendar', ejemplo: !!ejemplo,
     sistema:{...SISTEMA},
     dinero: ejemplo ? {...DINERO_EJEMPLO} : {...DINERO},
     visita:{...VISITA}, cobros:[],
@@ -125,6 +127,12 @@ const sel = (id, v, ops) => '<select id="' + id + '">' + ops.map(o =>
   '<option value="' + o[0] + '"' + (String(o[0]) === String(v) ? ' selected' : '') + '>' + o[1]
   + '</option>').join('') + '</select>';
 
+/* Una nota de equipo. Siempre en rojo y siempre rotulada: aquí es donde
+   está lo que no se puede pasar por alto. */
+const nota = txt => txt
+  ? '<div class="nota"><span class="et">Nota</span><span class="tp">' + txt + '</span></div>'
+  : '';
+
 const fila = (tx, vl, small, clase) =>
   '<div class="fila"><span class="tx">' + tx + (small ? '<small>' + small + '</small>' : '')
   + '</span><span class="vl ' + (clase||'') + '">' + vl + '</span></div>';
@@ -148,7 +156,7 @@ function pagoChip(t){
     : num(t.dinero.precio);
   if (!(t.cobros || []).length && !total) return '';
   const r = M.resumenCobros(t.cobros, total, 0);
-  const C = { 'sin cobrar':['visita','Sin cobrar'], parcial:['aceptado', Math.round(r.pct) + ' %'], pagado:['montado','Pagado'] };
+  const C = { 'sin cobrar':['agendar','Sin cobrar'], parcial:['aceptado', Math.round(r.pct) + ' %'], pagado:['montado','Pagado'] };
   const [cl, tx] = C[r.estado];
   return '<span class="estado ' + cl + '" style="margin-left:5px">' + tx + '</span>';
 }
@@ -201,7 +209,8 @@ function pintarPanel(){
 }
 
 function pintarTrabajos(){
-  const ETIQ = { visita:'Visita', cotizado:'Cotizado', aceptado:'Aceptado', montado:'Montado' };
+  const ETIQ = { agendar:'Por visitar', visita:'Visita', cotizado:'Cotizado',
+    aceptado:'Aceptado', montado:'Montado' };
   let h = pintarPanel();
   h += S.trabajos.map(t => {
     const e = M.dimensionar(sistemaDe(t));
@@ -233,7 +242,8 @@ function pintarTrabajos(){
         sel('t_tipo', t.tipo || 'montaje',
           [['montaje','Sistema completo instalado'],['venta','Venta de equipos, sin montaje']]))
     + campo('t_estado','En qué va','',sel('t_estado', t.estado,
-        [['visita','Visita hecha'],['cotizado','Cotizado'],['aceptado','Aceptado'],['montado','Montado']]))
+        [['agendar','Visita por hacer'],['visita','Visita hecha'],['cotizado','Cotizado'],
+         ['aceptado','Aceptado'],['montado','Montado']]))
     + '<button type="button" class="btn" id="btnEnviar" style="margin-top:14px">Enviar al instalador</button>'
     + (S.trabajos.length > 1
         ? '<button type="button" class="btn peligro" id="btnBorrar" style="margin-top:9px">Borrar este trabajo</button>'
@@ -248,7 +258,28 @@ function pintarTrabajos(){
 /* ═══════════════ PANTALLA · VISITA ═══════════════ */
 function pintarVisita(){
   const t = activo(), v = t.visita;
-  let h = caja('Lo que hay que mirar en la casa',
+  const porVisitar = t.estado === 'agendar';
+
+  /* La cita va primero y se queda arriba. El técnico abre esto en la calle
+     y lo primero que necesita es saber a qué casa va y a qué hora. */
+  let h = caja('Agendar la visita',
+    (porVisitar && !(v.cita || '').trim()
+      ? '<div class="titular rojo"><b>Esta visita no tiene fecha</b><small>'
+        + 'Sin fecha y sin dirección el técnico no sabe a qué casa ir. '
+        + 'Ponlas antes de mandarle el trabajo.</small></div>' : '')
+    + campo('v_cita','Día y hora','',
+        '<input type="datetime-local" id="v_cita" value="' + esc(v.cita) + '">')
+    + campo('v_quienVa','Quién va','',txtInp('v_quienVa', v.quienVa, 'Nombre del técnico'))
+    + campo('v_direccion','Dirección exacta','Calle, número, entre qué calles',
+        '<textarea id="v_direccion" placeholder="Calle Maceo 214, entre Martí y Céspedes, El Cobre">' + esc(v.direccion) + '</textarea>', true)
+    + campo('v_comoLlegar','Cómo llegar','Referencias, a quién preguntar, si hay perro',
+        '<textarea id="v_comoLlegar" placeholder="Casa de dos plantas frente a la bodega. Preguntar por Yuneisy.">' + esc(v.comoLlegar) + '</textarea>', true),
+    porVisitar
+      ? 'Cuando el técnico haya ido, cambia el estado del trabajo a <b>Visita hecha</b> en la '
+        + 'pantalla de Trabajos. Hasta entonces sale en la lista como <b>Por visitar</b>.'
+      : 'La visita ya está hecha. Estos datos se quedan aquí por si hay que volver.');
+
+  h += caja('Lo que hay que mirar en la casa',
     campo('v_consumo','Qué consume la casa','Los aparatos grandes: nevera, aire, bomba, lavadora',
       '<textarea id="v_consumo" placeholder="1 nevera, 2 aires de 12.000 BTU, bomba de agua...">' + esc(v.consumo) + '</textarea>', true)
     + campo('v_tipoTecho','Tipo de techo','',sel('v_tipoTecho', v.tipoTecho,
@@ -261,12 +292,18 @@ function pintarVisita(){
         sel('v_neutro', v.neutro, [['sin revisar','Sin revisar'],['bueno','Bueno y apretado'],['dudoso','Flojo o con verdín'],['malo','Malo, hay que cambiarlo']])),
     'Mide la distancia del último panel al inversor y métela en Diseño: de ahí sale el metraje de cable.');
 
-  h += caja('Los aparatos de la casa',
+  h += caja('Estado de la instalación de la casa',
     campo('v_equiposCasa','Qué encontraste','Un ventilador sin aceite o un motor que arranca mal puede quemar el inversor, y eso no lo cubre la garantía',
       '<textarea id="v_equiposCasa" placeholder="Motor de la bomba hace ruido, ventilador de techo sin aceite...">' + esc(v.equiposCasa) + '</textarea>', true)
     + campo('v_extra','Trabajo eléctrico previo a cotizar aparte','Balanceo de carga, cambio de cables, tablero nuevo',
       '<textarea id="v_extra" placeholder="Hay que balancear la carga entre las dos fases...">' + esc(v.extra) + '</textarea>', true),
     '<b>Todo lo que no cumpla se le dice al cliente y queda por escrito.</b> Si decide montar igual, queda bajo su propio riesgo, y si después una avería la provoca un aparato de la casa, responde él.');
+
+  /* El orden importa: primero se cuenta lo que hay, luego sale el kit, y
+     solo al final los riesgos, porque muchos de ellos salen de lo contado. */
+  h += bloqueAparatos(t);
+  h += bloqueKit(t);
+  h += bloqueRiesgos(t);
 
   h += caja('Lo que pide la casa y lo que puede pagar',
     campo('v_pide','Lo que la casa necesita de verdad','',txtInp('v_pide', v.pide, '6 kW y 10 kWh'), true)
@@ -276,6 +313,176 @@ function pintarVisita(){
     'Si no son la misma cifra, eso es una venta de ampliación dentro de un año. Déjalo apuntado.');
 
   $('p-visita').innerHTML = h;
+}
+
+/* ═══════════════ PROBLEMAS DE ALTO RIESGO ═══════════════
+   Esta caja se llena sola con lo que el técnico anotó. Lo rojo no se monta
+   hasta resolverlo, o el cliente firma que lo asume y que la garantía no
+   lo cubre. Esa firma es lo que separa una avería cubierta de una pelea. */
+function bloqueRiesgos(t){
+  const v = t.visita;
+  const R = M.riesgos(v, v.aparatos, APARATOS);
+  const orden = { alto:0, medio:1, info:2 };
+  R.sort((x, y) => orden[x.nivel] - orden[y.nivel]);
+  const altos = R.filter(r => r.nivel === 'alto');
+  const cl = M.clausulaRiesgo(R);
+
+  if (!R.length)
+    return caja('Problemas de alto riesgo',
+      '<div class="titular"><b>Nada pendiente</b><small>'
+      + 'Con lo que has anotado no queda ningún punto que impida montar. '
+      + 'Esta caja se llena sola en cuanto marques el neutro, la orientación, las sombras '
+      + 'o un aparato en mal estado.</small></div>');
+
+  let h = caja('Problemas de alto riesgo',
+    '<div class="titular ' + (altos.length ? 'rojo' : 'info') + '"><b>'
+    + (altos.length
+        ? altos.length + (altos.length === 1 ? ' punto que hay que resolver' : ' puntos que hay que resolver')
+        : 'Nada que impida montar')
+    + '</b><small>'
+    + (altos.length
+        ? 'Lo de abajo en rojo <b>no se monta hasta resolverlo</b>. Si el cliente decide montar '
+          + 'igual, firma la cláusula del final y esos puntos quedan fuera de garantía.'
+        : 'Hay avisos, pero ninguno impide montar. Léelos igual: son lo que explica el precio.')
+    + '</small></div>'
+    + R.map(r => '<div class="riesgo ' + r.nivel + '">'
+        + '<div class="q"><span class="niv">'
+        + (r.nivel === 'alto' ? 'No montar así' : r.nivel === 'medio' ? 'Avisar' : 'Producción')
+        + '</span>' + esc(r.qué) + '</div>'
+        + '<div class="tp">' + r.txt + '</div>'
+        + '<div class="sol"><span class="et">Qué se hace</span>' + r.arregla + '</div></div>').join(''),
+    'Esto no sale de una lista genérica: sale de lo que marcaste en el neutro, la orientación, '
+    + 'las sombras, los aparatos que contaste y lo que escribiste a mano.');
+
+  if (cl)
+    h += caja('Lo que firma el cliente',
+      '<div class="clausula">' + cl.texto + '</div>'
+      + fila('Puntos que asume el cliente', cl.n + (cl.n === 1 ? ' punto' : ' puntos'),
+          cl.puntos.join(' · '), 'bad'),
+      '<b>Esto se imprime, se firma y se guarda antes de subir al techo.</b> Tu proveedor solo '
+      + 'responde si un equipo llega malo de fábrica; desde que está montado, la avería la pagas '
+      + 'tú. Sin esta firma, una avería causada por el neutro de la casa te la vas a comer entera.');
+
+  return h;
+}
+
+/* ═══════════════ CONTAR LOS APARATOS DE LA CASA ═══════════════
+   El técnico cuenta lo que ve y de ahí sale el kit. Los vatios que salen
+   al lado de cada nombre son el valor estándar del aparato, no medido en
+   esta casa: si el técnico mide con pinza, su número manda. */
+function bloqueAparatos(t){
+  const sel = t.visita.aparatos || {};
+  const grupos = {};
+  Object.entries(APARATOS).forEach(([k, a]) => { (grupos[a.g] = grupos[a.g] || []).push([k, a]); });
+  const total = Object.values(sel).reduce((s, n) => s + (+n || 0), 0);
+
+  let cuerpo = '';
+  Object.entries(grupos).forEach(([g, lista]) => {
+    const cuenta = lista.reduce((s, [k]) => s + (+sel[k] || 0), 0);
+    cuerpo += '<details class="grupo"' + (cuenta ? ' open' : '') + '><summary>' + g
+      + '<span class="' + (cuenta ? 'si' : '') + '">'
+      + (cuenta ? cuenta : 'ninguno') + '</span></summary><div class="aps">';
+    lista.forEach(([k, a]) => {
+      const n = +sel[k] || 0;
+      cuerpo += '<div class="ap' + (n ? ' hay' : '') + '">'
+        + '<label for="ap_' + k + '">' + esc(a.n) + '<small>' + a.w + ' W'
+        + (a.arr > 1 ? ' · arranca a ' + Math.round(a.w * a.arr) + ' W' : '')
+        + ' · ' + String(a.h).replace('.', ',') + ' h al día'
+        + (a.es ? ' · <b>imprescindible</b>' : '') + '</small></label>'
+        + '<input type="number" id="ap_' + k + '" value="' + (n || '') + '"'
+        + ' min="0" max="60" step="1" inputmode="numeric" placeholder="0"></div>';
+    });
+    cuerpo += '</div></details>';
+  });
+
+  return caja('Los aparatos que hay en la casa'
+    + (total ? ' <span class="cont">' + total + '</span>' : ''), cuerpo,
+    'Los vatios de al lado son <b>el valor estándar del aparato</b>, no medido en esta casa. '
+    + 'Si mides con la pinza amperimétrica y te da otro número, el tuyo manda: apúntalo en las notas. '
+    + 'Cuenta también lo que el cliente piensa comprar este año, no solo lo que ya tiene.');
+}
+
+/* ═══════════════ EL KIT QUE PIDE LA CASA ═══════════════
+   Sale de lo contado arriba. Dos cifras a propósito: la casa completa y
+   solo lo imprescindible, porque en Cuba casi nadie compra el completo de
+   entrada y perder la venta por precio es peor que vender el chico. */
+function bloqueKit(t){
+  const k = M.kitDeAparatos(t.visita.aparatos, APARATOS, num(t.sistema.wpan));
+  if (!k.hayAlgo)
+    return caja('Qué kit pide esta casa',
+      '<div class="titular info"><b>Cuenta los aparatos primero</b><small>'
+      + 'En cuanto pongas cuántos hay de cada cosa, aquí sale el inversor, la batería y '
+      + 'los paneles que hacen falta, con la cuenta de cómo salieron.</small></div>');
+
+  const T = k.todo, E = k.esencial;
+  const n0 = v => Math.round(v).toLocaleString('es-ES');
+  const d1 = v => (Math.round(v * 10) / 10).toFixed(1).replace('.', ',');
+
+  /* Las dos ofertas, una debajo de otra y con el mismo formato, para que se
+     comparen de un vistazo delante del cliente. */
+  const opcion = (et, x, sub, clase) =>
+    '<div class="op ' + (clase || '') + '"><span class="et">' + et + '</span>'
+    + '<b>' + x.kwInv + ' kW · ' + String(x.kWhBat).replace('.', ',') + ' kWh</b>'
+    + '<span class="sub">' + x.npan + ' panel' + (x.npan === 1 ? '' : 'es')
+    + ' de ' + x.wpan + ' W · ' + d1(x.kWp) + ' kWp en el techo<br>' + sub + '</span></div>';
+
+  let h = caja('Qué kit pide esta casa',
+    '<div class="opciones">'
+    + opcion('La casa completa', T.k, 'Todo lo que contaste, funcionando a la vez.', 'principal')
+    + (E ? opcion('Solo lo imprescindible', E.k,
+        'Nevera, luces, ventiladores, tele, router, cargadores, olla, lavadora de dos tinas y '
+        + 'bomba de agua. Es lo que de verdad compra la mayoría de los clientes.') : '')
+    + '</div>'
+    + '<button type="button" class="btn" id="btnUsarKit" style="margin-top:14px">'
+    + 'Pasar ' + T.k.kwInv + ' kW y ' + T.k.npan + ' paneles a Diseño</button>',
+    'Al pulsar el botón se rellenan la potencia del inversor y el número de paneles en Diseño, '
+    + 'y se apunta la batería objetivo. <b>El inversor y la batería concretos los eliges tú</b>: '
+    + 'la aplicación no elige marca por su cuenta.');
+
+  h += caja('De dónde salen esas cifras',
+    fila('Gasta al día', d1(T.c.kWhDia) + ' kWh',
+      'Suma de vatios por horas de cada aparato. Esto es lo que dimensiona los paneles.')
+    + fila('De eso, sin sol', d1(T.c.kWhNoche) + ' kWh',
+      'Solo las horas de noche. Dividido entre 0,90 (a una batería de litio no se le saca el '
+      + 'último 10 %) y entre 0,95 (lo que pierde el inversor), pide ' + d1(T.k.batNec) + ' kWh.')
+    + fila('Siempre encendido', n0(T.c.contin) + ' W',
+      'Nevera, luces, ventiladores, tele, router: lo que no se apaga.')
+    + fila('Pico', n0(T.c.picoW) + ' W',
+      'Lo de arriba más los dos aparatos puntuales más grandes'
+      + (T.c.dosMayores.length ? ' (' + T.c.dosMayores.map(x => esc(x.n)).join(' y ') + ')' : '')
+      + '. No se suma todo porque nadie plancha mientras usa el microondas. '
+      + 'Con 25 % de margen pide ' + d1(T.k.invNec) + ' kW.')
+    + fila('Arranque', n0(T.c.arranqueW) + ' W',
+      'El pico más el tirón de ' + esc(T.c.quienTira || 'el peor motor')
+      + ' al encender. Dura un segundo y es la causa número uno de que un inversor se trabe.',
+      T.c.arranqueW > T.k.kwInv * 2000 ? 'bad' : 'ok')
+    + fila('Paneles', T.k.npan + ' de ' + T.k.wpan + ' W',
+      d1(T.c.kWhDia) + ' kWh entre ' + M.SOL_HORAS + ' horas de sol pleno en Santiago de Cuba y '
+      + Math.round(M.SOL_PERDIDAS * 100) + ' % de rendimiento: pide ' + d1(T.k.kWpNec) + ' kWp.'));
+
+  if (k.avisos.length){
+    const orden = { alto:0, medio:1, info:2 };
+    const av = k.avisos.slice().sort((x, y) => orden[x.nivel] - orden[y.nivel]);
+    h += caja('Lo que hay que decirle al cliente',
+      av.map(a => '<div class="av ' + a.nivel + '"><span class="q">' + esc(a.qué) + '</span>'
+        + '<span class="tp">' + a.txt + '</span></div>').join(''),
+      'Lo de arriba en rojo se resuelve antes de montar o queda por escrito que el cliente '
+      + 'decidió montar igual. Lo demás es argumento de venta: son las cosas que el cliente '
+      + 'no sabe y que explican el precio.');
+  }
+
+  if (k.detalle.length){
+    const top = k.detalle.slice(0, 8);
+    h += caja('Qué se lleva la corriente',
+      top.map(x => fila((x.cant > 1 ? x.cant + ' × ' : '') + esc(x.n),
+        d1(x.kWhDia) + ' kWh',
+        Math.round(x.kWhDia / T.c.kWhDia * 100) + ' % del gasto del día · ' + n0(x.w) + ' W',
+        x.kWhDia / T.c.kWhDia > 0.3 ? 'warn' : '')).join(''),
+      k.detalle.length > 8 ? 'Los ' + (k.detalle.length - 8) + ' aparatos que faltan gastan menos '
+        + 'que estos.' : 'Ordenado por lo que gasta cada uno al día. El de arriba es por donde '
+        + 'hay que empezar si hay que recortar.');
+  }
+  return h;
 }
 
 /* ═══════════════ PANTALLA · DISEÑO ═══════════════ */
@@ -312,11 +519,11 @@ function pintarDiseno(){
       selMarcas('s_modeloInv', s.modeloInv, MODELOS, '— elige el inversor —'), true)
     + (inv.ficha ? '<div class="fila"><span class="tx">Ficha del fabricante</span>'
         + '<a class="vl" href="'+inv.ficha+'" target="_blank" rel="noopener">Abrir</a></div>' : '')
-    + (inv.nota ? '<div class="fila"><span class="tx"><small>' + inv.nota + '</small></span></div>' : '')
+    + nota(inv.nota)
     + campo('s_modeloBat','<b>Batería</b>','',selMarcas('s_modeloBat', s.modeloBat, BATS, '— elige la batería —'), true)
     + (bat.ficha ? '<div class="fila"><span class="tx">Ficha de la batería</span>'
         + '<a class="vl" href="'+bat.ficha+'" target="_blank" rel="noopener">Abrir</a></div>' : '')
-    + (bat.nota ? '<div class="fila"><span class="tx"><small>' + bat.nota + '</small></span></div>' : ''));
+    + nota(bat.nota));
 
   h += caja('Números del sistema',
     campo('s_pinv','Potencia del inversor','En kW', numInp('s_pinv', s.pinv, 1, 30, 0.1, 'kW'))
@@ -1140,7 +1347,22 @@ document.addEventListener('input', ev => {
   const clave = id.slice(2);
   if (id.startsWith('s_') && t.sistema[clave] !== undefined){ t.sistema[clave] = ev.target.value; repinta(); }
   else if (id.startsWith('m_') && t.dinero[clave] !== undefined){ t.dinero[clave] = ev.target.value; repinta(); }
-  else if (id.startsWith('v_') && t.visita[clave] !== undefined){ t.visita[clave] = ev.target.value; guardar(); }
+  else if (id.startsWith('v_') && t.visita[clave] !== undefined){
+    /* Repinta, no solo guarda: el estado del neutro, las sombras y lo que se
+       escribe a mano alimentan la caja de «problemas de alto riesgo», que si
+       no se repinta se queda mostrando algo que ya no es verdad. */
+    t.visita[clave] = ev.target.value; repinta();
+  }
+  else if (id.startsWith('ap_')){
+    /* cuántos hay de un aparato. Un 0 o un campo vacío lo borra del conteo,
+       para que no se quede un cero suelto ensuciando la cuenta. */
+    const k = id.slice(3);
+    if (!APARATOS[k]) return;
+    t.visita.aparatos = t.visita.aparatos || {};
+    const n = Math.max(0, Math.floor(num(ev.target.value)));
+    if (n > 0) t.visita.aparatos[k] = n; else delete t.visita.aparatos[k];
+    repinta();
+  }
   else if (id.startsWith('a_') && S.ajustes[clave] !== undefined){ S.ajustes[clave] = ev.target.value; repinta(); }
   else if (id.startsWith('t_')){ t[clave] = ev.target.value; if (clave==='nombre') $('nmTrabajo').textContent = ev.target.value; guardar(); }
 });
@@ -1186,6 +1408,22 @@ document.addEventListener('click', ev => {
   const ir = ev.target.closest('[data-ir]');
   if (ir){ S.activo = ir.dataset.ir; avisado = {}; pintar(); return; }
   if (ev.target.id === 'btnNuevo'){ nuevoTrabajo(); pintar(); window.scrollTo(0,0); return; }
+  if (ev.target.id === 'btnUsarKit'){
+    /* Pasa a Diseño SOLO la potencia del inversor y el número de paneles, más
+       la batería objetivo apuntada. No elige marca ni modelo: Marcos pidió
+       expresamente que la aplicación nunca sugiera un equipo por su cuenta. */
+    const t = activo();
+    const k = M.kitDeAparatos(t.visita.aparatos, APARATOS, num(t.sistema.wpan));
+    if (!k.hayAlgo) return;
+    t.sistema.pinv = k.todo.k.kwInv;
+    t.sistema.npan = k.todo.k.npan;
+    t.visita.objetivoKWh = k.todo.k.kWhBat;
+    t.visita.pide = k.todo.k.kwInv + ' kW · '
+      + String(k.todo.k.kWhBat).replace('.', ',') + ' kWh · ' + k.todo.k.npan + ' paneles';
+    guardar();
+    pantalla = 'diseno'; window.scrollTo(0, 0); pintar();
+    return;
+  }
   if (ev.target.id === 'btnActualizar'){
     const msg = t => { const e = $('msgAct'); if (e) e.textContent = t; };
     msg('Buscando…');

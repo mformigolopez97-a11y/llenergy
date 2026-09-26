@@ -13,7 +13,7 @@
 export const BATS={
  'manual':{n:'— Otro / meter los datos a mano —',manual:true},
  'fintera-5':{n:'Fintra HZR-100-16S · 5,12 kWh · 51,2 V',v:51.2,ah:100,ides:100,icar:50,ok:false,ficha:'',
-   nota:'<b>La marca es Fintra</b> (no Fintera), y el modelo de caja es <b>HZR-100-16S</b>. De la caja y el manual salen confirmados: 51,2 V · 100 Ah · 5.120 Wh · 16 celdas · montaje en pared. <b>Lo que sigue sin confirmar son los amperios del BMS:</b> he puesto 100 A de descarga y 50 A de carga porque es lo normal en ese formato, pero no son dato del fabricante. Están en el manual de usuario que viene en la caja: <b>fotografía la página de especificaciones</b> y se cierra.'},
+   nota:'<b>La marca es Fintra</b> (no Fintera), y el modelo de caja es <b>HZR-100-16S</b>. De la caja y el manual salen confirmados: 51,2 V · 100 Ah · 5.120 Wh · 16 celdas · montaje en pared. <b>Los amperios del BMS no están en la foto</b>, pero el formato 16S de 100 Ah está muy estandarizado: casi todos los fabricantes lo sacan con <b>100 A de descarga (1C) y 50 A de carga (0,5C)</b>, corte de carga a 58,4 V y corte de descarga a 40 V. Esos son los números que hay puestos. Aun así <b>confírmalos en el manual que viene dentro de la caja</b> antes de poner esta batería con un inversor grande: con 100 A de descarga, un inversor de 6 kW no le saca su potencia.'},
  'todo-15360':{n:'InfiniSolar INF20-48300PRO · 15,36 kWh · 51,2 V',v:51.2,ah:300,ides:200,icar:200,ok:true,ficha:'',
    nota:'<b>Datos leídos de la etiqueta del equipo</b>, no estimados: 51,2 V · 300 Ah · 15.360 Wh · <b>200 A de carga y 200 A de descarga</b>. A 200 A y 51,2 V puede soltar más de 10 kW, así que le sobra para un inversor de 6 kW. <b>Cuidado con la temperatura:</b> solo carga entre 0 y 45 °C y descarga entre −10 y 45 °C. En un cuarto cerrado sin ventilación pasa de 45 °C y <b>deja de cargar sola</b>: ponla en sitio fresco y aireado, nunca pegada al techo ni al sol.'},
  'pylontech-us5000':{n:'Pylontech US5000C · 4,8 kWh · 48 V',v:48,ah:100,ides:80,icar:80,dod:0.95,
@@ -76,25 +76,25 @@ export const MODELOS={
     Solar Inverter · PV3300 TLV Series (1KW-6KW)". Son de baja frecuencia,
     con transformador: arrancan motores mucho mejor que los de alta. */
  'must-tlv-3024':{trae:['brkAC'],n:'MUST PV33-3024 TLV · 3 kW · bifásico · batería 24 V',kw:3,vnom:24,icar:80,
-   vflot:27,vtope:0,vac:'120',vmax:145,vmin:30,vmpmax:130,nmppt:1,impp:25,ok:false,
+   vflot:27,vtope:0,vac:'120',vmax:145,vmin:30,vmpmax:130,nmppt:1,impp:25,pvmax:2500,acarga:40,arranque:9000,ok:false,
    ficha:'https://www.mustpower.com/product/pv3300-tlv-3kw-6kw/',
    nota:'<b>OJO: estos números salen de un catálogo de MUST, y la etiqueta del equipo de 6 kW dice otra cosa</b> (245 V y MPPT de 60 a 230, en vez de 145 y 30-130). Son dos generaciones del mismo producto. <b>Lee la etiqueta de tu unidad antes de cablear.</b> Según el catálogo: sale en <b>fase dividida</b> (HOT1 + neutro + HOT2), o sea 110/120 V y 220/240 V a la vez: es la topología de la red cubana. Frecuencia ajustable a 60 Hz. <b>Ojo con los paneles: solo aguanta 145 V en circuito abierto</b> y el MPPT regula de 30 a 130 V, así que con paneles de 46 V caben <b>dos en serie, no más</b>. Campo solar máximo 2.500 W, carga 80 A. Arranque de motor 9.000 VA, que es mucho para 3 kW: es de baja frecuencia, con transformador. La corriente máxima de entrada FV no viene en la ficha; he puesto 25 A por el campo máximo, compruébalo.'},
  'must-tlv-3048':{trae:['brkAC'],n:'MUST PV33-3048 TLV · 3 kW · bifásico · batería 48 V',kw:3,vnom:48,icar:80,
-   vflot:54,vtope:0,vac:'120',vmax:145,vmin:60,vmpmax:130,nmppt:1,impp:25,ok:false,
+   vflot:54,vtope:0,vac:'120',vmax:145,vmin:60,vmpmax:130,nmppt:1,impp:25,pvmax:5000,acarga:20,arranque:9000,ok:false,
    ficha:'https://www.mustpower.com/product/pv3300-tlv-3kw-6kw/',
    nota:'El mismo de 3 kW pero con batería de <b>48 V</b> en vez de 24 V. Con 48 V el inversor tira la mitad de corriente de la batería, así que el BMS sufre mucho menos. Mismos límites de paneles: 145 V máximo y MPPT de 60 a 130 V.'},
  'must-tlv-6048':{trae:['brkAC'],n:'MUST PV33-6048 TLV · 6 kW · bifásico · batería 48 V',kw:6,vnom:48,icar:80,
-   vflot:54,vtope:0,pbat:6000,vac:'240',vmax:245,vmin:60,vmpmax:230,nmppt:1,impp:25,ok:true,
+   vflot:54,vtope:0,pbat:6000,vac:'240',vmax:245,vmin:60,vmpmax:230,nmppt:1,impp:25,pvmax:5000,acarga:40,arranque:18000,ok:true,
    ficha:'https://www.mustpower.com/product/pv3300-tlv-3kw-6kw/',
    nota:'<b>Etiqueta del equipo.</b> Salida bifásica <b>120/240 V</b> a 50/60 Hz, 25 A. Entrada CC de batería <b>147 A</b>. Paneles: <b>245 V</b> máximos en circuito abierto y MPPT de <b>60 a 230 V</b> — con paneles de 46 V caben <b>cuatro en serie</b>. Carga solar 80 A y desde la red 40 A. <b>Ojo: trabaja solo entre 0 y 40 °C</b>, que es un rango estrecho para un cuarto caluroso en Santiago; ponlo donde corra el aire.'},
  'must-tlv-5048':{trae:['brkAC'],n:'MUST PV33-5048 TLV · 5 kW · bifásico · batería 48 V',kw:5,vnom:48,icar:80,
-   vflot:54,vtope:0,vac:'120',vmax:145,vmin:60,vmpmax:130,nmppt:1,impp:30,ok:false,
+   vflot:54,vtope:0,vac:'120',vmax:145,vmin:60,vmpmax:130,nmppt:1,impp:30,pvmax:5000,acarga:35,arranque:15000,ok:false,
    ficha:'https://www.mustpower.com/product/pv3300-tlv-3kw-6kw/',
    nota:'Ficha oficial. Campo solar 5.000 W, arranque 15.000 VA. <b>Mismo tope de 145 V en los paneles</b>: dos en serie con paneles de 46 V.'},
  'must-tlv-1024':{trae:['brkAC'],n:'MUST PV33-1024 TLV · 1 kW · bifásico · batería 24 V',kw:1,vnom:24,icar:60,
    vflot:27,vtope:0,vac:'120',vmax:100,vmin:16,vmpmax:95,nmppt:1,impp:15,ok:true,
    ficha:'https://www.mustpower.com/product/pv3300-tlv-3kw-6kw/',
-   nota:'El pequeño de la serie. <b>Solo 100 V en circuito abierto</b> y MPPT de 16 a 95 V: con paneles de 46 V cabe <b>uno solo en serie</b>. Campo solar 1.250 W. Para una casa muy básica o un cuarto.'},
+   nota:'<b>Este modelo no aparece en la ficha actual de MUST</b>, solo en una anterior: puede estar descatalogado o llamarse ya de otra forma. Según esa ficha vieja, <b>solo 100 V en circuito abierto</b> y MPPT de 16 a 95 V: con paneles de 46 V cabe <b>uno solo en serie</b>. Campo solar 1.250 W. Para una casa muy básica o un cuarto.'},
 
  /* ---- PowMr ---- */
  'powmr-62k-450':{n:'PowMr POW-HVM6.2K · 6,2 kW · ventana 60–450 V',kw:6.2,vnom:48,icar:120,vflot:0,vtope:0,pbat:6200,
@@ -176,4 +176,98 @@ export const PRECIOS = {
       lleva:['Montada y cableada','Modificable según el sistema'],
       falta:['Por confirmar: SPD, diferencial de 30 mA y fusible Clase T'] },
   },
+};
+
+/* ═══════════════════════════════════════════════════════════════════════
+   APARATOS DE UNA CASA CUBANA
+
+   Sirve para deducir qué kit pide la casa a partir de lo que el técnico
+   encuentra en la visita, en vez de adivinarlo.
+
+   ─── De dónde salen estos números ───
+   Son los VALORES ESTÁNDAR del aparato, no medidos en la casa del cliente:
+   la placa del fabricante, o el consumo típico del formato cuando la placa
+   ya no se lee. Marcos los pidió así a propósito, porque lleva cuatro años
+   fuera de Cuba y no tiene medidas propias. Cada uno se puede corregir a
+   mano en la pantalla, y si el técnico mide con una pinza amperimétrica,
+   ese número manda sobre este.
+
+   ─── Qué significa cada campo ───
+   g   grupo, solo para ordenar la lista
+   n   nombre como se le dice en Cuba
+   w   vatios de marcha, ya en régimen
+   arr veces que esos vatios se multiplican en el arranque (los motores)
+   h   horas al día que anda, en una casa normal
+   hn  de esas horas, las que caen sin sol: esto es lo que dimensiona la
+       batería, no el consumo del día entero
+   p   true = puntual: no anda todo el tiempo, se usa a ratos
+   es  true = entra en el paquete de lo imprescindible, que es lo que de
+       verdad compra la mayoría de los clientes cubanos
+   av  aviso que hay que leer antes de cotizar con ese aparato dentro
+   ═══════════════════════════════════════════════════════════════════════ */
+export const APARATOS = {
+  /* ── Frío: es el gasto que nunca para ── */
+  nevera:      {g:'Frío', n:'Nevera de 7 a 10 pies', w:150, arr:4, h:8, hn:4, es:true,
+    av:'El compresor arranca tirando unas <b>4 veces</b> su consumo de marcha. Un inversor justo de potencia se apaga en ese tirón aunque le sobre capacidad el resto del día.'},
+  neveraInv:   {g:'Frío', n:'Nevera moderna inverter', w:90, arr:2, h:9, hn:4.5, es:true},
+  freezer:     {g:'Frío', n:'Freezer / congelador de casa', w:200, arr:4, h:8, hn:4},
+  exhibidora:  {g:'Frío', n:'Nevera exhibidora o vitrina (negocio)', w:350, arr:4, h:12, hn:6,
+    av:'Una exhibidora se lleva sola unos <b>4 kWh al día</b> y no se puede apagar de noche. Si el cliente tiene un negocio, este aparato manda en el tamaño de la batería.'},
+
+  /* ── Climatización ── */
+  aire9:       {g:'Climatización', n:'Aire de 9.000 BTU · inverter', w:750, arr:2, h:8, hn:8},
+  aire12inv:   {g:'Climatización', n:'Aire de 12.000 BTU · inverter', w:1000, arr:2, h:8, hn:8},
+  aire12:      {g:'Climatización', n:'Aire de 12.000 BTU · corriente (no inverter)', w:1400, arr:4, h:8, hn:8,
+    av:'Un aire que no es inverter arranca tirando <b>cuatro veces</b> su consumo y anda a todo o nada. En un sistema solar cuesta casi el doble que uno inverter. Cambiar el aire suele salir más barato que agrandar el inversor y la batería.'},
+  aire18:      {g:'Climatización', n:'Aire de 18.000 BTU', w:1700, arr:3, h:8, hn:8},
+  ventTecho:   {g:'Climatización', n:'Ventilador de techo', w:60, arr:1, h:10, hn:8, es:true},
+  ventPie:     {g:'Climatización', n:'Ventilador de pie o de mesa', w:55, arr:2, h:10, hn:8, es:true},
+  extractor:   {g:'Climatización', n:'Extractor de baño o cocina', w:40, arr:2, h:1, hn:0.5, p:true},
+
+  /* ── Agua: en Cuba la bomba no es un lujo, es como entra el agua ── */
+  bomba05:     {g:'Agua', n:'Bomba de agua de 1/2 HP', w:550, arr:5, h:1, hn:0, p:true, es:true,
+    av:'La bomba es el arranque más bruto de la casa: <b>cinco veces</b> su consumo durante un segundo. El inversor se dimensiona por ese tirón, no por su consumo.'},
+  bomba1:      {g:'Agua', n:'Bomba de agua de 1 HP', w:900, arr:5, h:1, hn:0, p:true},
+  bombaPozo:   {g:'Agua', n:'Bomba sumergible de pozo · 1,5 HP', w:1300, arr:4, h:1.5, hn:0, p:true},
+  ducha:       {g:'Agua', n:'Ducha eléctrica / calentador de paso', w:4000, arr:1, h:0.7, hn:0.4, p:true,
+    av:'<b>Esto solo ya pide un inversor de 5 o 6 kW</b> aunque el resto de la casa quepa en 3 kW, y se lleva 2,8 kWh al día. Lo barato es sacarla del sistema solar y dejarla en la red, o cambiarla por una de gas. Dilo antes de cotizar, no después.'},
+  termo:       {g:'Agua', n:'Termo eléctrico de tanque', w:1500, arr:1, h:2, hn:0.5, p:true},
+
+  /* ── Cocina: los módulos de la Revolución Energética están en toda casa ── */
+  ollaArroz:   {g:'Cocina', n:'Olla arrocera (olla reina)', w:700, arr:1, h:1, hn:0.5, p:true, es:true},
+  ollaPresion: {g:'Cocina', n:'Olla de presión eléctrica', w:900, arr:1, h:0.8, hn:0.4, p:true},
+  ollaMulti:   {g:'Cocina', n:'Olla multipropósito', w:1000, arr:1, h:1, hn:0.5, p:true},
+  hornilla:    {g:'Cocina', n:'Hornilla eléctrica de resistencia', w:1000, arr:1, h:1.5, hn:0.7, p:true},
+  induccion:   {g:'Cocina', n:'Hornilla de inducción', w:1800, arr:1, h:1, hn:0.5, p:true,
+    av:'Gasta menos por comida que la de resistencia, pero tira <b>1.800 W de golpe</b>. Si se enciende justo cuando arranca la nevera, el inversor tiene que aguantar las dos cosas a la vez.'},
+  microondas:  {g:'Cocina', n:'Microondas', w:1200, arr:1, h:0.3, hn:0.2, p:true},
+  hornoElec:   {g:'Cocina', n:'Horno eléctrico', w:1500, arr:1, h:0.5, hn:0.3, p:true},
+  cafetera:    {g:'Cocina', n:'Cafetera eléctrica', w:600, arr:1, h:0.3, hn:0, p:true},
+  batidora:    {g:'Cocina', n:'Batidora', w:350, arr:2, h:0.2, hn:0.1, p:true},
+
+  /* ── La casa ── */
+  led:         {g:'Casa', n:'Bombillo LED', w:9, arr:1, h:5, hn:5, es:true},
+  ahorrador:   {g:'Casa', n:'Bombillo ahorrador viejo (CFL)', w:20, arr:1, h:5, hn:5,
+    av:'Cambiar los ahorradores viejos por LED cuesta poco y baja el consumo de luz a menos de la mitad. Es la forma más barata de que la casa quepa en un kit más chico.'},
+  tv32:        {g:'Casa', n:'Televisor LED de 32 pulgadas', w:50, arr:1, h:5, hn:4, es:true},
+  tv55:        {g:'Casa', n:'Televisor LED de 55 pulgadas', w:110, arr:1, h:5, hn:4},
+  router:      {g:'Casa', n:'Router de Nauta Hogar', w:12, arr:1, h:24, hn:12, es:true},
+  cargadores:  {g:'Casa', n:'Cargadores de teléfono (todos)', w:10, arr:1, h:4, hn:3, es:true},
+  laptop:      {g:'Casa', n:'Computadora portátil', w:65, arr:1, h:4, hn:2},
+  pcMesa:      {g:'Casa', n:'Computadora de mesa', w:200, arr:1, h:4, hn:2},
+  plancha:     {g:'Casa', n:'Plancha', w:1000, arr:1, h:0.5, hn:0.2, p:true},
+  lavAuto:     {g:'Casa', n:'Lavadora automática', w:500, arr:3, h:1, hn:0, p:true},
+  lavDosTinas: {g:'Casa', n:'Lavadora de dos tinas (semiautomática)', w:350, arr:3, h:1, hn:0, p:true, es:true},
+  coser:       {g:'Casa', n:'Máquina de coser', w:100, arr:2, h:1, hn:0.3, p:true},
+  secadora:    {g:'Casa', n:'Secadora de pelo', w:1500, arr:1, h:0.2, hn:0.1, p:true},
+  porton:      {g:'Casa', n:'Motor de portón', w:550, arr:4, h:0.1, hn:0.05, p:true},
+
+  /* ── Negocio en la casa: cambia el sistema por completo ── */
+  congBiz:     {g:'Negocio', n:'Congelador horizontal grande', w:300, arr:4, h:10, hn:5},
+  hornoPizza:  {g:'Negocio', n:'Horno de pizza eléctrico', w:2500, arr:1, h:3, hn:2, p:true,
+    av:'<b>2.500 W durante tres horas son 7,5 kWh</b>, casi el doble de lo que gasta una casa entera. Un negocio de comida no cabe en un kit doméstico: cotízalo aparte.'},
+  batidosBiz:  {g:'Negocio', n:'Máquina de batidos o helado', w:600, arr:3, h:2, hn:1, p:true},
+  compresor:   {g:'Negocio', n:'Compresor de aire pequeño', w:1100, arr:5, h:1, hn:0, p:true},
+  soldadora:   {g:'Negocio', n:'Soldadora eléctrica pequeña', w:3500, arr:2, h:0.5, hn:0, p:true,
+    av:'<b>No la pongas en el sistema solar.</b> Tira 3.500 W a golpes y con picos del doble: apaga el inversor y con el tiempo lo mata. Va en la red, con su propio breaker.'},
 };

@@ -604,6 +604,19 @@ export function faltan(t){
       'Hay que medirla en la casa. De ahí salen los metros de cable');
 
   const v = t.visita || {};
+
+  /* Si la visita todavía no se ha hecho, lo que falta no son datos técnicos:
+     es saber a qué casa va el técnico y cuándo. Sin eso el trabajo no se le
+     puede mandar. */
+  if (t.estado === 'agendar'){
+    if (!String(v.cita || '').trim())
+      pon('Visita', 'Día y hora de la visita',
+        'Sin fecha, el trabajo que le mandes al técnico no le dice cuándo ir');
+    if (!String(v.direccion || '').trim())
+      pon('Visita', 'Dirección de la casa',
+        'El nombre y la zona no bastan para encontrar una casa en El Cobre');
+  }
+
   if (!String(v.consumo || '').trim())
     pon('Visita', 'Qué consume la casa',
       'Sin eso no se puede decir si el equipo le va a dar de verdad');
@@ -612,4 +625,320 @@ export function faltan(t){
       'Es la causa número uno de equipos quemados en Cuba');
 
   return L;
+}
+/* ═══════════════ 12 · QUÉ KIT PIDE LA CASA ═══════════════
+
+   Entra lo que el técnico contó en la visita y sale el kit que hace falta.
+   Esto sustituye al «yo creo que con 5 kW le basta».
+
+   ─── Las tres cuentas, y por qué se hacen así ───
+
+   1 · LO QUE GASTA AL DÍA · suma de vatios por horas. Esto dimensiona los
+       PANELES, porque son los que tienen que reponer ese gasto.
+
+   2 · EL PICO · lo más que puede estar encendido a la vez. No es la suma
+       de todo: nadie plancha mientras usa el microondas y la hornilla. Se
+       suma todo lo que anda seguido (nevera, luces, ventiladores, tele) y
+       se le añaden LOS DOS APARATOS PUNTUALES MÁS GRANDES, que es lo que
+       de verdad pasa: alguien cocina mientras la bomba llena el tanque.
+       Esto dimensiona el INVERSOR.
+
+   3 · EL ARRANQUE · el pico de arriba, más el tirón del peor motor al
+       encender. Una bomba de media pluma tira cinco veces su consumo
+       durante un segundo. Esto decide si el inversor elegido aguanta o se
+       apaga, y es la causa número uno de «el inversor se traba».
+
+   4 · LA BATERÍA · solo las horas sin sol, que es para lo que sirve. Se
+       divide entre 0,90 porque a una batería de litio no se le saca el
+       último 10 %, y entre 0,95 por lo que pierde el inversor al convertir.
+
+   ─── Y la cuenta que importa para vender ───
+   Sale DOS VECES: la casa completa, y solo lo imprescindible. En Cuba casi
+   nadie compra la casa completa de entrada; compra lo imprescindible y
+   amplía. Tener los dos números delante es lo que permite ofrecer algo en
+   vez de perder el cliente por precio.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+export const INV_STD = [3, 5, 6, 8, 10, 12];                    // kW que se consiguen
+export const BAT_STD = [2.56, 5.12, 7.68, 10.24, 15.36, 20.48]; // kWh de litio
+export const SOL_HORAS = 5;      // horas de sol pleno al día en Santiago de Cuba
+export const SOL_PERDIDAS = 0.75; // lo que se pierde por calor, polvo y cables
+export const DOD = 0.90;         // lo que se le saca de verdad a una batería de litio
+export const REND_INV = 0.95;    // lo que pierde el inversor al convertir
+
+/* Una pasada de cuentas sobre un conjunto de aparatos ya elegido. */
+function cuentaDe(items){
+  let kWhDia = 0, kWhNoche = 0, contin = 0;
+  const puntuales = [];
+  let peorTiron = 0, quienTira = '';
+
+  items.forEach(it => {
+    const { a, n } = it;
+    const w = a.w * n;
+    kWhDia   += a.w * n * a.h  / 1000;
+    kWhNoche += a.w * n * (a.hn || 0) / 1000;
+    if (a.p) puntuales.push({ w, n: a.n }); else contin += w;
+
+    /* El tirón: arranca UNO y los demás del mismo tipo ya andan. Dos neveras
+       no arrancan en el mismo instante; suponer que sí infla el inversor. */
+    const tiron = a.w * ((a.arr || 1) - 1);
+    if (tiron > peorTiron) { peorTiron = tiron; quienTira = a.n; }
+  });
+
+  puntuales.sort((x, y) => y.w - x.w);
+  const dosMayores = puntuales.slice(0, 2);
+  const picoW = contin + dosMayores.reduce((s, x) => s + x.w, 0);
+  const arranqueW = picoW + peorTiron;
+
+  return { kWhDia, kWhNoche, contin, picoW, arranqueW, peorTiron, quienTira,
+    puntuales, dosMayores };
+}
+
+const arriba = (v, lista) => lista.find(x => x >= v) || lista[lista.length - 1];
+
+/* De la cuenta al kit: inversor, batería y paneles. */
+function kitDe(c, wpan){
+  const invNec = c.picoW * 1.25 / 1000;          // 25 % de margen sobre el pico
+  const kwInv  = arriba(invNec, INV_STD);
+  const batNec = c.kWhNoche / DOD / REND_INV;
+  const kWhBat = arriba(batNec, BAT_STD);
+  const kWpNec = c.kWhDia / (SOL_HORAS * SOL_PERDIDAS);
+  const W = wpan > 0 ? wpan : 585;               // el panel que más se ve en Cuba
+  const npan  = Math.max(1, Math.ceil(kWpNec * 1000 / W));
+  return { invNec, kwInv, batNec, kWhBat, kWpNec, npan, wpan: W,
+    kWp: npan * W / 1000 };
+}
+
+/* ─── La función que usa la pantalla ───
+   sel   = { claveDelAparato: cuántos hay }
+   TABLA = la tabla APARATOS, que se pasa de fuera para que este motor siga
+           sin depender de nada.
+   wpan  = vatios del panel que se va a usar; si no se sabe, pone 585 W.   */
+export function kitDeAparatos(sel, TABLA, wpan){
+  const items = [], esenc = [];
+  Object.entries(sel || {}).forEach(([k, n]) => {
+    const a = TABLA[k]; const c = Math.max(0, Math.floor(+n || 0));
+    if (!a || c < 1) return;
+    items.push({ a, n: c, k });
+    if (a.es) esenc.push({ a, n: c, k });
+  });
+
+  if (!items.length)
+    return { hayAlgo:false, nAparatos:0, avisos:[], detalle:[] };
+
+  const cTodo = cuentaDe(items),  kTodo = kitDe(cTodo, wpan);
+  const cEse  = esenc.length ? cuentaDe(esenc) : null;
+  const kEse  = cEse ? kitDe(cEse, wpan) : null;
+
+  /* ─── Avisos ─── */
+  const avisos = [];
+  const pon = (nivel, qué, txt) => avisos.push({ nivel, qué, txt });
+
+  // 1 · el aviso propio de cada aparato, tal como está escrito en la tabla
+  items.forEach(it => { if (it.a.av) pon('medio', it.a.n, it.a.av); });
+
+  // 2 · ¿aguanta el arranque el inversor que sale?
+  //     Un híbrido decente da el doble de su potencia un par de segundos.
+  const tope = kTodo.kwInv * 1000 * 2;
+  if (cTodo.arranqueW > tope){
+    const sube = arriba(cTodo.arranqueW / 2 / 1000, INV_STD);
+    pon('alto', 'El arranque no cabe',
+      'Con todo andando y <b>' + it0(cTodo.quienTira) + '</b> arrancando se juntan <b>'
+      + Math.round(cTodo.arranqueW) + ' W</b> durante un segundo. Un inversor de '
+      + kTodo.kwInv + ' kW aguanta unos ' + tope + ' W en ese instante, así que se apagaría. '
+      + 'O subes a <b>' + sube + ' kW</b>, o el arranque de ese motor se separa del resto '
+      + '(arrancador suave, o que no coincida con la hora de cocinar).');
+  }
+
+  // 3 · la batería que pide no existe: no se puede redondear hacia abajo en silencio
+  const batTope = BAT_STD[BAT_STD.length - 1];
+  if (kTodo.batNec > batTope)
+    pon('alto', 'La batería que pide no existe',
+      'Las horas sin sol piden <b>' + dec1(kTodo.batNec) + ' kWh</b> de batería y el banco más '
+      + 'grande de la lista es de <b>' + conComa(batTope) + ' kWh</b>. El número que sale arriba '
+      + 'es ese tope, <b>no lo que la casa necesita</b>: con él el cliente se queda sin corriente '
+      + 'antes de amanecer. Hay que poner dos bancos en paralelo, o quitar del solar lo que gasta '
+      + 'de noche (el aire es casi siempre el culpable) y decírselo por escrito.');
+
+  // 4 · lo que se sale de la lista de equipos que se consiguen
+  if (cTodo.picoW * 1.25 / 1000 > INV_STD[INV_STD.length - 1])
+    pon('alto', 'Se pasa de lo que hay',
+      'Esta casa pide más de <b>' + INV_STD[INV_STD.length - 1] + ' kW</b>, que es el inversor '
+      + 'más grande de la lista. Hay que repartirla en dos sistemas, o dejar los aparatos '
+      + 'más brutos fuera del solar y en la red.');
+
+  // 5 · todo de día: la batería es respaldo, no el motor del sistema
+  if (cTodo.kWhNoche < cTodo.kWhDia * 0.15)
+    pon('info', 'Casi todo el gasto es de día',
+      'Solo <b>' + dec1(cTodo.kWhNoche) + ' kWh</b> de los ' + dec1(cTodo.kWhDia)
+      + ' caen sin sol. La batería que sale es chica a propósito: aquí manda el panel, '
+      + 'no la batería. Si el cliente quiere aguantar un apagón largo de noche, '
+      + 'eso es una decisión suya y se cotiza aparte.');
+
+  // 6 · la venta de ampliación
+  if (kEse && (kEse.kwInv < kTodo.kwInv || kEse.kWhBat < kTodo.kWhBat))
+    pon('info', 'Hay dos ofertas aquí',
+      'Lo imprescindible cabe en <b>' + kEse.kwInv + ' kW y ' + conComa(kEse.kWhBat) + ' kWh</b>; '
+      + 'la casa completa pide <b>' + kTodo.kwInv + ' kW y ' + conComa(kTodo.kWhBat) + ' kWh</b>. '
+      + 'Si el cliente no llega al completo, véndele el chico <b>dejando el sitio hecho para '
+      + 'ampliar</b>: espacio en el techo, brequera con posiciones libres y un inversor que '
+      + 'admita más batería. La ampliación es la segunda venta.');
+
+  return { hayAlgo:true, nAparatos: items.length,
+    todo:{ c:cTodo, k:kTodo }, esencial: kEse ? { c:cEse, k:kEse } : null,
+    avisos,
+    detalle: items.map(it => ({ n: it.a.n, g: it.a.g, cant: it.n, es: !!it.a.es,
+      w: it.a.w * it.n, kWhDia: it.a.w * it.n * it.a.h / 1000 }))
+      .sort((x, y) => y.kWhDia - x.kWhDia) };
+}
+
+const it0 = s => s || 'el motor más grande';
+const dec1 = v => (Math.round(v * 10) / 10).toFixed(1).replace('.', ',');
+const conComa = v => String(v).replace('.', ',');
+
+/* ═══════════════ 13 · PROBLEMAS DE ALTO RIESGO ═══════════════
+
+   Sale solo de lo que el técnico anotó en la visita. No es una lista de
+   buenas prácticas: es lo que, si no se resuelve antes de montar, acaba en
+   un equipo quemado y en una discusión sobre quién paga.
+
+   Por qué existe esta pantalla: el proveedor de Marcos solo responde si un
+   equipo llega malo. Desde el momento en que está montado, la avería la
+   paga Light of Life Energy. Así que todo lo que la casa aporte al riesgo
+   tiene que quedar escrito y firmado ANTES, no discutido después.
+
+   Tres niveles, y cada uno tiene una consecuencia distinta:
+   alto  → no se monta hasta resolverlo, o el cliente firma que asume ese
+           punto y la garantía no lo cubre
+   medio → se puede montar, pero se cotiza aparte o se avisa por escrito
+   info  → afecta a lo que produce el sistema; el cliente tiene que saberlo
+           para que no reclame después por una producción que nadie prometió
+   ═══════════════════════════════════════════════════════════════════════ */
+export function riesgos(v, sel, TABLA){
+  const L = [];
+  const pon = (nivel, qué, txt, arregla) => L.push({ nivel, qué, txt, arregla });
+
+  /* ── El neutro. En Cuba es la causa número uno de equipos quemados ── */
+  if (v.neutro === 'malo')
+    pon('alto', 'El neutro está malo',
+      'Un neutro en mal estado hace que la tensión de las dos fases se descompense: una sube '
+      + 'a 140 V y la otra baja a 90 V. Eso quema el inversor, y también la nevera y el aire '
+      + 'del cliente. <b>No es un defecto del equipo que montamos, pero lo mata igual.</b>',
+      'Cambiar el neutro desde el poste o desde el metro contador antes de montar nada. '
+      + 'Se cotiza aparte y va en la cotización como partida propia.');
+  else if (v.neutro === 'dudoso')
+    pon('alto', 'El neutro está flojo o con verdín',
+      'Un neutro flojo funciona hoy y falla dentro de tres meses, normalmente de noche y con '
+      + 'todo encendido. El verdín es resistencia: calienta, y donde calienta acaba abriendo.',
+      'Apretar y limpiar todas las conexiones de neutro, del metro contador al tablero. '
+      + 'Si al apretar el cable se deshace, se cambia. Media hora de trabajo que evita '
+      + 'la reclamación más cara que existe.');
+  else if (v.neutro === 'sin revisar')
+    pon('alto', 'El neutro no se ha revisado',
+      'Sin haber mirado el neutro no se puede dar por bueno un montaje. Es el único punto '
+      + 'de esta lista que <b>no se puede dejar para después</b>.',
+      'Mide entre neutro y tierra con la casa cargada: si pasa de 3 V, hay problema. '
+      + 'Mira también las dos fases contra neutro: tienen que darte parecido.');
+
+  /* ── El techo: esto no es un riesgo de avería, es de producción ── */
+  if (v.orientacion === 'norte')
+    pon('alto', 'El techo mira al norte',
+      'En Cuba, un techo orientado al norte produce alrededor de <b>un 25 % menos</b> que uno '
+      + 'al sur. Si se monta así sin decirlo, el cliente va a reclamar una producción que '
+      + 'nadie le prometió, y va a tener razón en quejarse.',
+      'Monta con estructura orientada al sur aunque el techo mire al norte, o busca otra '
+      + 'faldón. Si no hay manera, ponlo por escrito en la cotización con el número: '
+      + 'un 25 % menos de producción.');
+  else if (v.orientacion === 'este' || v.orientacion === 'oeste')
+    pon('medio', 'El techo mira al ' + v.orientacion,
+      'Un techo al este o al oeste produce entre un 10 y un 15 % menos que al sur, y la '
+      + 'producción se concentra en media jornada en vez de repartirse.',
+      'Con estructura inclinada hacia el sur se recupera casi todo. Súmalo al presupuesto '
+      + 'de estructura y explícale por qué vale más.');
+
+  if (v.sombras === 'todo')
+    pon('alto', 'Hay sombra buena parte del día',
+      'Una sombra sobre un solo panel arrastra a toda la cadena: si están en serie, el panel '
+      + 'tapado manda sobre los demás. Con sombra media jornada el sistema puede producir '
+      + '<b>la mitad</b> de lo que dice la ficha.',
+      'Primero, quitar la sombra si se puede (podar el árbol, mover el tanque). Si no se '
+      + 'puede, reparte los paneles en dos cadenas de modo que la sombra caiga solo en una, '
+      + 'o usa optimizadores. Y baja la producción prometida en la cotización.');
+  else if (v.sombras === 'manana' || v.sombras === 'tarde')
+    pon('medio', 'Hay sombra por la ' + (v.sombras === 'manana' ? 'mañana' : 'tarde'),
+      'Se pierden las primeras o las últimas horas de sol. No es grave, pero cuenta: son '
+      + 'entre un 10 y un 20 % del día.',
+      'Coloca los paneles en la parte del techo que se libera antes, y agrupa en la misma '
+      + 'cadena los que se tapan a la vez.');
+
+  /* ── Aparatos de la casa que ponen en riesgo lo que montamos ── */
+  Object.entries(sel || {}).forEach(([k, n]) => {
+    const a = TABLA[k]; if (!a || !(+n > 0)) return;
+    if (k === 'soldadora')
+      pon('alto', 'Hay una soldadora en la casa',
+        'Una soldadora tira la corriente a golpes, con picos del doble de su consumo. El '
+        + 'inversor se apaga cada vez, y esos apagones repetidos acaban con la etapa de '
+        + 'salida. <b>Si se quema por esto, no es un defecto de fábrica.</b>',
+        'La soldadora se queda en la red, con su propio breaker, fuera del inversor. Queda '
+        + 'por escrito que conectarla al sistema anula la garantía.');
+    if (k === 'ducha')
+      pon('alto', 'Hay ducha eléctrica',
+        'Una ducha de paso tira <b>4.000 W</b> de golpe. Sola ya obliga a un inversor de 5 o '
+        + '6 kW aunque el resto de la casa quepa en 3 kW, y encarece el sistema completo.',
+        'Lo barato es dejar la ducha en la red y fuera del solar, o cambiarla por una de gas. '
+        + 'Decide esto ANTES de cotizar: cambiarlo después es rehacer el presupuesto.');
+    if (k === 'aire12' || k === 'aire18')
+      pon('medio', 'Hay aire que no es inverter',
+        'Un aire de arranque directo tira cuatro veces su consumo al encender y trabaja a todo '
+        + 'o nada. Obliga a un inversor y una batería más grandes que un aire inverter del '
+        + 'mismo frío.',
+        'Haz la cuenta de las dos cosas y enséñasela: cambiar el aire suele salir más barato '
+        + 'que la diferencia de inversor y batería, y además le baja la factura.');
+    if (k === 'hornoPizza' || k === 'compresor' || k === 'exhibidora')
+      pon('medio', 'Hay un negocio en la casa',
+        'Un negocio no es una casa con un aparato más: son cargas que no se pueden apagar y '
+        + 'que se llevan la batería de noche. El sistema tiene que dimensionarse por el '
+        + 'negocio, no por la vivienda.',
+        'Cotiza el negocio como un sistema aparte, o deja escrito qué se apaga cuando falta '
+        + 'la red. Si no se define, el cliente va a reclamar que se le apagó el congelador.');
+  });
+
+  /* ── Lo que el técnico escribió con sus palabras ── */
+  if ((v.equiposCasa || '').trim())
+    pon('alto', 'El técnico encontró aparatos en mal estado',
+      'Lo anotado en la visita: <i>' + String(v.equiposCasa).replace(/[<>]/g, '') + '</i>. '
+      + 'Un motor que arranca mal o un ventilador sin aceite tira picos de corriente que '
+      + 'el inversor tiene que aguantar todos los días.',
+      'Se arregla antes de montar, o queda firmado que el cliente decidió montar con esos '
+      + 'aparatos tal como están y que la garantía no cubre lo que provoquen.');
+
+  if ((v.extra || '').trim())
+    pon('medio', 'Hace falta trabajo eléctrico previo',
+      'Lo anotado en la visita: <i>' + String(v.extra).replace(/[<>]/g, '') + '</i>.',
+      'Esto va en la cotización como partida aparte, con su precio. Si se regala, se come '
+      + 'el margen del montaje y el cliente no valora lo que le hiciste.');
+
+  if (v.tipoTecho === 'inclinado' || v.tipoTecho === 'mixto')
+    pon('info', 'El techo no es plano',
+      'En un techo inclinado los paneles van pegados al agua del techo, así que la '
+      + 'inclinación la manda el techo y no se puede elegir. Hay que comprobar que el agua '
+      + 'cae hacia el sur y que la estructura aguanta.',
+      'Mide la inclinación real del techo y apúntala en Diseño. Si el agua no va al sur, '
+      + 'vuelve a la fila de la orientación de esta misma lista.');
+
+  return L;
+}
+
+/* El texto que firma el cliente cuando decide montar con puntos sin
+   resolver. No es letra pequeña: es lo que separa una avería cubierta de
+   una discusión. Se arma con los puntos altos que quedaron abiertos. */
+export function clausulaRiesgo(lista){
+  const altos = (lista || []).filter(r => r.nivel === 'alto');
+  if (!altos.length) return null;
+  return { n: altos.length, puntos: altos.map(r => r.qué),
+    texto: 'El cliente ha sido informado por escrito, antes del montaje, de los siguientes '
+      + 'puntos de su instalación: ' + altos.map(r => r.qué.toLowerCase()).join('; ') + '. '
+      + 'El cliente decide proceder con el montaje sin resolverlos y asume el riesgo. '
+      + 'La garantía de Light of Life Energy no cubre las averías que tengan su origen en '
+      + 'estos puntos. El resto de la garantía se mantiene íntegra.' };
 }

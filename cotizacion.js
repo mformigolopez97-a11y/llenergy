@@ -10,6 +10,7 @@
    ═══════════════════════════════════════════════════════════════════════ */
 
 import * as M from './motor.js';
+import { APARATOS } from './datos.js';
 
 const co  = x => String(x).replace('.', ',');
 const mil = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -46,6 +47,10 @@ export function datosCot(t, aj){
     montaje: +t.dinero.cobroMontaje || 0,
     garantia: +aj.garantiaMeses || 12,
     protecciones: M.protecciones(d, null).filter(p => !p.viene),
+    /* Los puntos de riesgo que el cliente asume, con su nombre y uno por uno.
+       Van a la cotización porque es el papel que se firma: una condición
+       genérica no sirve de nada el día que hay una discusión. */
+    clausula: M.clausulaRiesgo(M.riesgos(t.visita || {}, (t.visita || {}).aparatos, APARATOS)),
   };
 }
 
@@ -135,6 +140,15 @@ export function htmlCot(c){
   <h2>Garantía</h2>
   <p class="cuerpo"><b>${c.garantia} meses</b> sobre los equipos instalados y sobre
   el trabajo de instalación, a partir de la puesta en marcha.</p>
+
+  ${c.clausula ? `<h2>Puntos de su instalación que usted asume</h2>
+  <p class="cuerpo">En la visita se encontraron <b>${c.clausula.n}
+  ${c.clausula.n === 1 ? 'punto' : 'puntos'}</b> que no dependen de los equipos que
+  le instalamos, sino del estado de la casa. Se los explicamos antes de montar para
+  que decida con la información delante.</p>
+  <ul class="lista riesgos">${c.clausula.puntos.map(x => '<li>' + esc(x) + '</li>').join('')}</ul>
+  <p class="cuerpo asume">${esc(c.clausula.texto)}</p>
+  <div class="firmas"><div><span></span>Firma del cliente</div><div><span></span>Fecha</div></div>` : ''}
 
   <h2>Condiciones que el cliente acepta</h2>
   <ol class="condiciones">

@@ -98,6 +98,101 @@ main{padding:16px 16px calc(var(--nav) + env(safe-area-inset-bottom) + 26px);
 .yatrae{margin:14px -16px -12px; padding:11px 16px; background:var(--verde-s);
   border-top:1px solid var(--linea); font-size:12.5px; color:var(--gris); line-height:1.5}
 .yatrae b{color:var(--verde); font-weight:600}
+/* ─── Contar los aparatos de la casa ─── */
+.caja h2 .cont{display:inline-block; margin-left:8px; padding:2px 8px; border-radius:20px;
+  font-family:"IBM Plex Mono",monospace; font-size:10px; font-weight:700;
+  color:var(--negro); background:var(--naranja); vertical-align:2px}
+
+details.grupo{border-top:1px solid var(--linea2)}
+details.grupo:first-child{border-top:none}
+details.grupo > summary{display:flex; justify-content:space-between; align-items:center;
+  gap:10px; padding:13px 2px; cursor:pointer; list-style:none;
+  font-family:"Archivo",sans-serif; font-size:14.5px; font-weight:700; color:var(--blanco)}
+details.grupo > summary::-webkit-details-marker{display:none}
+details.grupo > summary::after{content:"+"; order:3; font-family:"IBM Plex Mono",monospace;
+  font-size:16px; color:var(--gris2); width:14px; text-align:center}
+details.grupo[open] > summary::after{content:"–"}
+details.grupo > summary > span{margin-left:auto; font-family:"IBM Plex Mono",monospace;
+  font-size:10.5px; font-weight:700; color:var(--gris2)}
+details.grupo > summary > span.si{color:var(--naranja)}
+.aps{padding-bottom:8px}
+.ap{display:flex; align-items:center; gap:12px; padding:8px 0 9px;
+  border-top:1px solid var(--linea2)}
+.ap > label{flex:1; min-width:0; font-size:14px; color:var(--gris); line-height:1.4}
+.ap > label small{display:block; font-family:"IBM Plex Mono",monospace; font-size:10.5px;
+  color:var(--gris2); margin-top:3px; letter-spacing:.01em}
+.ap > label small b{color:var(--verde); font-weight:700}
+.ap > input{flex:0 0 62px; width:62px; text-align:center; padding:9px 4px;
+  font-family:"IBM Plex Mono",monospace; font-size:15px; font-weight:700}
+.ap.hay > label{color:var(--blanco)}
+.ap.hay > input{border-color:rgba(255,138,60,.45); color:var(--naranja);
+  background:var(--naranja-s)}
+
+/* ─── Las dos ofertas, para compararlas delante del cliente ─── */
+.opciones{display:flex; flex-direction:column; gap:10px; margin:-2px 0 2px}
+.op{padding:14px 15px 15px; border-radius:12px; background:var(--panel2);
+  border:1px solid var(--linea)}
+.op.principal{background:linear-gradient(180deg, var(--verde-s), transparent);
+  border-color:rgba(47,217,127,.3)}
+.op .et{display:block; font-family:"IBM Plex Mono",monospace; font-size:9.5px;
+  font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--gris2);
+  margin-bottom:7px}
+.op.principal .et{color:var(--verde)}
+.op > b{display:block; font-family:"Archivo",sans-serif; font-size:24px; font-weight:800;
+  color:var(--blanco); line-height:1.15; letter-spacing:-.01em}
+.op.principal > b{color:var(--verde)}
+.op .sub{display:block; margin-top:8px; font-size:12.5px; line-height:1.55; color:var(--gris)}
+
+/* ─── Avisos del kit ─── */
+.av{padding:12px 0 13px; border-top:1px solid var(--linea2)}
+.av:first-child{border-top:none; padding-top:4px}
+.av .q{display:block; font-family:"Archivo",sans-serif; font-size:14px; font-weight:700;
+  margin-bottom:5px}
+.av .tp{display:block; font-size:13px; line-height:1.58; color:var(--gris)}
+.av .tp b{color:var(--blanco); font-weight:600}
+.av.alto .q{color:var(--rojo)}
+.av.alto .tp b{color:#FFC2CC}
+.av.medio .q{color:var(--ambar)}
+.av.info .q{color:var(--menta)}
+
+/* ─── Problemas de alto riesgo ─── */
+.riesgo{margin:10px 0; padding:13px 14px 14px; border-radius:11px;
+  background:var(--panel2); border:1px solid var(--linea)}
+.riesgo.alto{background:var(--rojo-s); border-color:rgba(251,113,133,.3)}
+.riesgo.medio{background:var(--ambar-s); border-color:rgba(251,191,36,.26)}
+.riesgo .q{font-family:"Archivo",sans-serif; font-size:15.5px; font-weight:800;
+  color:var(--blanco); line-height:1.3}
+.riesgo .niv{display:block; font-family:"IBM Plex Mono",monospace; font-size:9px;
+  font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin-bottom:6px}
+.riesgo.alto .niv{color:var(--rojo)}
+.riesgo.medio .niv{color:var(--ambar)}
+.riesgo.info .niv{color:var(--menta)}
+.riesgo .tp{font-size:13.5px; line-height:1.6; color:var(--gris); margin-top:8px}
+.riesgo .tp b{color:var(--blanco); font-weight:600}
+.riesgo .tp i{color:var(--blanco); font-style:normal; background:rgba(255,255,255,.05);
+  padding:1px 5px; border-radius:4px}
+.riesgo .sol{margin-top:11px; padding-top:11px; border-top:1px solid var(--linea);
+  font-size:13px; line-height:1.58; color:var(--gris)}
+.riesgo .sol b{color:var(--blanco); font-weight:600}
+.riesgo .sol .et{display:block; font-family:"IBM Plex Mono",monospace; font-size:9px;
+  font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--verde);
+  margin-bottom:5px}
+
+.clausula{padding:14px 15px; border-radius:11px; background:var(--panel2);
+  border:1px solid var(--linea); font-size:13.5px; line-height:1.68; color:var(--blanco)}
+
+/* Notas de equipo: rojas siempre, por pedido expreso. Es donde están los
+   datos sin confirmar y los límites que queman un inversor. */
+.nota{display:flex; gap:10px; align-items:flex-start; margin:4px 0 2px;
+  padding:11px 13px 12px; border-radius:10px;
+  background:var(--rojo-s); border:1px solid rgba(251,113,133,.26)}
+.nota .et{flex:0 0 auto; font-family:"IBM Plex Mono",monospace; font-size:9px;
+  font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--rojo); padding-top:2px}
+.nota .tp{font-size:13px; line-height:1.55; color:var(--rojo)}
+.nota .tp b{color:#FFC2CC; font-weight:700}
+.nota .tp a{color:var(--rojo); text-decoration:underline}
+
 .pista{font-size:13px; color:var(--gris); padding:12px 16px 14px; line-height:1.55;
   border-top:1px solid var(--linea2); background:rgba(255,255,255,.012)}
 .pista b{color:var(--blanco); font-weight:600}
@@ -187,6 +282,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .estado{font-family:"IBM Plex Mono",monospace; font-size:9px; font-weight:700;
   letter-spacing:.09em; text-transform:uppercase; padding:5px 9px; border-radius:6px;
   white-space:nowrap; border:1px solid}
+.estado.agendar{color:var(--naranja); border-color:rgba(255,138,60,.34); background:var(--naranja-s)}
 .estado.visita{color:var(--gris); border-color:var(--linea); background:var(--panel2)}
 .estado.cotizado{color:var(--verde); border-color:rgba(59,191,240,.3); background:var(--verde-s)}
 .estado.aceptado{color:var(--ambar); border-color:rgba(251,191,36,.3); background:var(--ambar-s)}
@@ -295,6 +391,18 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .cot .lista{margin:0; padding-left:20px; color:#3A342D; font-size:14.5px}
 .cot .lista li{margin-bottom:6px}
 .cot .lista b{color:#1A1714}
+/* Los puntos que el cliente asume, y las rayas donde firma. Esto se imprime
+   y se guarda: es lo que separa una averia cubierta de una discusion. */
+.cot .lista.riesgos li{color:#8C2F1E; font-weight:600}
+.cot .asume{margin-top:14px; padding:15px 17px; border-radius:6px;
+  background:#FBF3EF; border:1px solid #E3C9BF; color:#5A2418; font-size:14.5px;
+  line-height:1.65}
+.cot .firmas{display:flex; gap:30px; margin:28px 0 6px}
+.cot .firmas > div{flex:1; font-size:12px; letter-spacing:.06em;
+  text-transform:uppercase; color:#8A8075}
+.cot .firmas span{display:block; height:44px; border-bottom:1.5px solid #B9AFA2;
+  margin-bottom:7px}
+
 .cot .condiciones{margin:0; padding-left:22px; color:#3A342D; font-size:15px}
 .cot .condiciones li{margin-bottom:12px}
 .cot .condiciones b{color:#1A1714}
