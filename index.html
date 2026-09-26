@@ -128,6 +128,23 @@ details.grupo > summary > span.si{color:var(--naranja)}
 .ap.hay > input{border-color:rgba(255,138,60,.45); color:var(--naranja);
   background:var(--naranja-s)}
 
+/* ─── Qué cuesta arreglar cada aviso de compatibilidad ─── */
+.arreglo{display:inline-block; margin-left:8px; padding:2px 8px; border-radius:20px;
+  font-family:"IBM Plex Mono",monospace; font-size:9px; font-weight:700;
+  letter-spacing:.06em; text-transform:uppercase; vertical-align:1px; white-space:nowrap}
+.arreglo.menu{color:var(--ambar); background:var(--ambar-s); border:1px solid rgba(251,191,36,.3)}
+.arreglo.equipo{color:var(--rojo); background:var(--rojo-s); border:1px solid rgba(251,113,133,.32)}
+.arreglo.saber{color:var(--menta); background:var(--menta-s); border:1px solid rgba(94,234,212,.3)}
+
+/* Dónde va físicamente una pieza, y la cuenta de la que sale una cantidad */
+.donde{display:block; margin-top:4px; font-family:"IBM Plex Mono",monospace;
+  font-size:10px; font-weight:500; letter-spacing:.02em; color:var(--gris2);
+  text-transform:none}
+.cuenta{display:block; margin-top:7px; padding:7px 10px; border-radius:7px;
+  background:var(--panel2); border-left:2px solid var(--linea);
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; line-height:1.6;
+  color:var(--gris2); letter-spacing:.01em}
+
 /* ─── Las dos ofertas, para compararlas delante del cliente ─── */
 .opciones{display:flex; flex-direction:column; gap:10px; margin:-2px 0 2px}
 .op{padding:14px 15px 15px; border-radius:12px; background:var(--panel2);
@@ -226,15 +243,21 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   outline:2px solid var(--verde); outline-offset:2px}
 
 /* ── filas de resultado ── */
-.fila{display:flex; justify-content:space-between; gap:14px; align-items:baseline;
-  padding:11px 0; border-bottom:1px solid var(--linea2)}
+.fila{display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 14px;
+  align-items:baseline; padding:11px 0; border-bottom:1px solid var(--linea2)}
 .fila:last-child{border-bottom:none}
-.fila .tx{flex:1; min-width:0; font-weight:500}
+/* El titulo nunca baja de este ancho: si el valor no cabe al lado, es el valor
+   el que se va a su propia linea, no el titulo el que se estrangula. */
+.fila .tx{flex:1 1 auto; min-width:min(56%, 190px); font-weight:500}
+.fila .nt{flex:1 0 100%; font-size:12.5px; color:var(--gris); margin-top:2px;
+  line-height:1.5; font-weight:400}
+.fila .nt b{color:var(--blanco); font-weight:600}
 .fila small{display:block; font-size:12.5px; color:var(--gris); margin-top:3px;
   line-height:1.5; font-weight:400}
 .fila small b{color:var(--blanco); font-weight:600}
 .fila .vl{font-family:"IBM Plex Mono",monospace; font-weight:700; font-size:14px;
-  text-align:right; white-space:nowrap; flex-shrink:0; color:var(--blanco)}
+  text-align:right; white-space:nowrap; flex:0 0 auto; margin-left:auto;
+  color:var(--blanco)}
 .sep{font-family:"IBM Plex Mono",monospace; font-size:9.5px; font-weight:700;
   letter-spacing:.14em; text-transform:uppercase; color:var(--verde);
   margin:14px -16px 0; padding:10px 16px 8px;

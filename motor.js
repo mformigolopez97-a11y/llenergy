@@ -186,7 +186,25 @@ export function montaje(e){
   const fondo = inc.plano ? inc.base : largoUtil;
   const superficie = Math.round(porFila * anchoUtil * (fondo * filas + inc.separacion * (filas - 1)) * 10) / 10;
 
-  return { filas, porFila, presMedio, presExtremo,
+  const r1m = v => (Math.round(v*10)/10).toString().replace('.', ',');
+  const cuentas = {
+    presMedio: porFila <= 1
+      ? 'Con un solo panel por fila no hay presillas intermedias'
+      : '2 rieles × (' + porFila + ' paneles por fila − 1) × ' + filas + ' fila'
+        + (filas === 1 ? '' : 's') + ' = ' + presMedio + '. Cada intermedia pisa dos paneles vecinos',
+    presExtremo: '4 por fila (dos rieles × dos extremos) × ' + filas + ' fila'
+      + (filas === 1 ? '' : 's') + ' = ' + presExtremo,
+    riel: porFila + ' paneles × ' + String(Math.round(anchoUtil*100)/100).replace('.', ',') + ' m de '
+      + (vert ? 'ancho' : 'largo') + ' + 0,2 m de holgura = ' + r1m(rielPorFila)
+      + ' m por riel × 2 rieles × ' + filas + ' fila' + (filas === 1 ? '' : 's')
+      + ' = ' + r1m(metrosRiel) + ' m',
+    apoyos: 'Un apoyo cada 1,7 m de riel, más uno de cierre: (' + r1m(rielPorFila)
+      + ' ÷ 1,7 redondeado arriba + 1) × ' + filas + ' = ' + apoyos,
+    perfil: r1m(metrosRiel) + ' m de riel + ' + r1m(metrosApoyo)
+      + ' m de triángulos, × 1,1 por los cortes = ' + metrosPerfil + ' m',
+  };
+
+  return { filas, porFila, presMedio, presExtremo, cuentas,
     tornillos: presMedio + presExtremo,
     apoyos, metrosRiel: Math.round(metrosRiel*10)/10,
     metrosApoyo: Math.round(metrosApoyo*10)/10, metrosPerfil,
@@ -201,8 +219,28 @@ export function conexion(d, e){
   const cad = g.best.cadenas;
   const metros = Math.ceil((dist * 2 * cad * 1.15) / 5) * 5;
 
+  /* De dónde sale cada cantidad, con los números de verdad. Marcos preguntó
+     literalmente «cómo sabes que son 12 metros», y tenía razón en preguntarlo:
+     una cifra que no se puede rastrear no se puede defender delante de un
+     cliente ni corregir cuando está mal. Ojo con una distinción importante:
+     la distancia es un dato MEDIDO por él en el techo, no calculado. */
+  const dec = v => (Math.round(v * 10) / 10).toString().replace('.', ',');
+  const cuentas = {
+    cable: dist + ' m medidos en la casa × 2 (baja y sube) × ' + cad + ' cadena'
+      + (cad === 1 ? '' : 's') + ' × 1,15 de margen = ' + dec(dist*2*cad*1.15)
+      + ' m, redondeado a ' + metros + ' m porque el cable se vende de 5 en 5',
+    mc4: cad + ' cadena' + (cad === 1 ? '' : 's') + ' × 2 extremos + 2 pares de repuesto = '
+      + (cad*2+2) + ' pares',
+    prensa: 'Dos por cadena, uno de entrada y otro de salida: ' + cad + ' × 2 = '
+      + Math.max(2, cad*2) + (cad*2 < 2 ? ' (mínimo 2)' : ''),
+    corrugado: dist + ' m × 1,2 por las curvas = ' + dec(dist*1.2)
+      + ' m, redondeado a ' + (Math.ceil(dist*1.2/5)*5) + ' m',
+    bridas: e.npan + ' paneles × 10 bridas cada uno = ' + (e.npan*10)
+      + ', redondeado a ' + (Math.ceil(e.npan*10/25)*25) + ' porque vienen en bolsas de 25',
+  };
+
   return {
-    enSerie: g.best.s, cadenas: cad, dist,
+    enSerie: g.best.s, cadenas: cad, dist, cuentas,
     metrosCable: metros,
     paresMC4: cad * 2 + 2,
     conectorY: cad === 1 ? 'no' : (cad === 2 ? 'si' : 'prohibido'),
@@ -215,9 +253,30 @@ export function conexion(d, e){
 }
 
 /* ═══════════════ 6 · COMPATIBILIDAD BATERÍA ↔ INVERSOR ═══════════════ */
+/* Cada aviso de compatibilidad lleva, ademas de si esta bien o mal, QUE CUESTA
+   arreglarlo. No es lo mismo bajar un numero en el menu del inversor, que es
+   gratis y son dos minutos, que tener que comprar otra bateria. Marcos pidio
+   esta separacion porque delante del cliente cambia por completo la
+   conversacion: una es un ajuste y la otra es dinero. */
+export const ARREGLOS = {
+  nada:   { et:'Bien',                   ord:3,
+    q:'No hay nada que hacer aquí.' },
+  menu:   { et:'Se arregla en el menú',  ord:1,
+    q:'Se corrige cambiando un ajuste del inversor. No cuesta dinero y son dos minutos, '
+      + 'pero hay que hacerlo <b>antes de dejar la casa</b>: si se olvida, el sistema trabaja mal '
+      + 'desde el primer día y nadie se entera hasta que algo falla.' },
+  equipo: { et:'Hay que cambiar equipo', ord:0,
+    q:'Esto no se arregla con un ajuste: falta hardware o el que hay no sirve. '
+      + '<b>Cambia el precio de la cotización</b>, así que se decide antes de dar un número.' },
+  saber:  { et:'Falta un dato',          ord:2,
+    q:'No es un fallo: es que ese dato no se sabe todavía. Hasta confirmarlo no se puede dar '
+      + 'por bueno el cálculo que depende de él.' },
+};
+
 export function compatibilidad(d, inv, bat){
   const celdas = Math.max(1, Math.round(d.Vbat / 3.2));
   const r1 = x => Math.round(x * 10) / 10;
+  const n1 = x => String(Math.round(x * 10) / 10).replace('.', ',');
   const pub = !!(bat && bat.vcar && bat.vflo && bat.vmin);
   const vAbs = pub ? bat.vcar : r1(celdas * 3.55);
   const vFlo = pub ? bat.vflo : r1(celdas * 3.40);
@@ -226,18 +285,22 @@ export function compatibilidad(d, inv, bat){
   const dod  = (bat && bat.dod) || 0.9;
 
   const filas = [];
-  const add = (estado, tit, valor, nota) => filas.push({ estado, tit, valor, nota });
+  const add = (estado, tit, valor, nota, arreglo) =>
+    filas.push({ estado, tit, valor, nota, arreglo: arreglo || (estado === 'bad' ? 'equipo' : 'nada') });
 
   // voltaje
   let vOK = true;
   if (inv && !inv.manual && inv.vnom){
     vOK = d.Vbat >= inv.vnom * 0.85 && d.Vbat <= inv.vnom * 1.25;
-    add(vOK ? 'ok' : 'bad', 'Voltaje', d.Vbat + ' V ↔ ' + inv.vnom + ' V',
+    add(vOK ? 'ok' : 'bad', 'Voltaje', n1(d.Vbat) + ' V ↔ ' + n1(inv.vnom) + ' V',
       vOK ? 'Encajan. Son ' + celdas + ' celdas de litio en serie.'
-          : 'NO encajan. El inversor es de ' + inv.vnom + ' V y la batería de ' + d.Vbat + ' V.');
+          : 'NO encajan. El inversor es de ' + n1(inv.vnom) + ' V y la batería de ' + n1(d.Vbat) + ' V. '
+            + 'Esto no tiene arreglo por menú ni por cableado: o cambia la batería o cambia el inversor.',
+      vOK ? 'nada' : 'equipo');
   } else {
-    add('warn', 'Voltaje', d.Vbat + ' V',
-      'El inversor está en modo manual: comprueba en su etiqueta que sea de la misma clase.');
+    add('warn', 'Voltaje', n1(d.Vbat) + ' V',
+      'El inversor está en modo manual: comprueba en su etiqueta que sea de la misma clase.',
+      'saber');
   }
 
   if (!vOK){
@@ -257,7 +320,8 @@ export function compatibilidad(d, inv, bat){
       : estD === 'warn'
       ? 'Funciona, pero sin colchón. Con la batería por debajo del 40 % puede cortar.'
       : 'Sobra margen para los arranques de motor.'
-        + (Pdesc < d.P ? ' En modo batería este inversor da ' + Pdesc + ' W, no ' + d.P + ' W.' : ''));
+        + (Pdesc < d.P ? ' En modo batería este inversor da ' + Pdesc + ' W, no ' + d.P + ' W.' : ''),
+    estD === 'ok' ? 'nada' : 'equipo');
 
   // carga
   const c05 = Math.round(d.AhTot * 0.5);
@@ -272,32 +336,58 @@ export function compatibilidad(d, inv, bat){
         + ' A). Baja el límite de carga a ' + limiteCarga + ' A en el menú.'
       : estC === 'warn'
       ? 'Cabe, pero pasa de medio C y acorta la vida de las celdas. Ponlo en ' + limiteCarga + ' A.'
-      : 'Bien, dentro de lo que admite la batería.');
+      : 'Bien, dentro de lo que admite la batería.',
+    estC === 'ok' ? 'nada' : 'menu');
 
   // tope de tensión
   if (inv && !inv.manual){
     if (inv.vtope){
       const ok = inv.vtope > vAbs + 1;
-      add(ok ? 'ok' : 'warn', 'Tope de carga', inv.vtope + ' V corta · ' + vAbs + ' V carga',
+      add(ok ? 'ok' : 'warn', 'Tope de carga', n1(inv.vtope) + ' V corta · ' + n1(vAbs) + ' V carga',
         ok ? 'Hay hueco de sobra: la carga completa nunca dispara la protección.'
-           : 'Va demasiado justo: puede cortarte la carga antes de tiempo.');
+           : 'Va demasiado justo: puede cortarte la carga antes de tiempo. Sube el corte por '
+             + 'sobretensión en el menú del inversor, o baja el voltaje de absorción de la batería.',
+        ok ? 'nada' : 'menu');
     } else {
-      add('warn', 'Tope de carga', 'sin confirmar · ' + vAbs + ' V carga',
+      add('warn', 'Tope de carga', 'sin confirmar · ' + n1(vAbs) + ' V carga',
         'De este inversor no tengo el voltaje al que corta por sobretensión. '
-        + 'Comprueba en su menú que la protección esté por encima de ' + vAbs + ' V.');
+        + 'Comprueba en su menú que la protección esté por encima de ' + n1(vAbs) + ' V.',
+        'saber');
     }
+  }
+
+  /* Las dos fases. Un inversor bifasico da 120 V entre cada fase y el neutro
+     y 240 V entre las dos, pero SU POTENCIA SE REPARTE: cada fase da como
+     mucho la mitad. En Cuba hay casas cableadas enteras a 110 V donde todo
+     cuelga de una sola fase, y entonces el inversor se apaga a media potencia
+     aunque le sobre capacidad. Es de los fallos que parecen avería y no lo son. */
+  if (d.Vac >= 200){
+    const porFase = Math.round(d.P / 2);
+    add('info', 'Las dos fases', porFase + ' W por fase',
+      'Este inversor da <b>120 V</b> entre cada fase y el neutro, y <b>240 V</b> entre las dos. '
+      + 'Los ' + d.P + ' W completos solo salen con la carga repartida: <b>cada fase entrega '
+      + porFase + ' W como mucho</b>, que son los ' + Math.round(d.Iac) + ' A del breaker. '
+      + 'Si la casa está cableada entera a 110 V y todo cuelga de una sola fase, <b>el inversor '
+      + 'se apaga a media potencia</b> aunque le sobre capacidad, y parece una avería sin serlo. '
+      + 'Mide el consumo de cada fase en el tablero y reparte los circuitos antes de irte.',
+      'saber');
+  } else {
+    add('info', 'Una sola fase', d.P + ' W a ' + d.Vac + ' V',
+      'Salida de una sola fase: toda la potencia sale por el mismo par de cables, así que el '
+      + 'breaker va dimensionado a los ' + Math.round(d.Iac) + ' A completos. No hay nada que '
+      + 'repartir, pero tampoco se pueden alimentar cargas de 220 V.', 'nada');
   }
 
   // recarga y reserva
   const horas = d.kWp > 0 ? d.kWh / (d.kWp * 0.75) : 0;
-  add('info', 'Recarga', (Math.round(horas*10)/10) + ' h de sol',
-    'Llenar ' + r1(d.kWh) + ' kWh desde vacío con ' + r1(d.kWp)
-    + ' kWp. En Santiago cuenta con 5 horas útiles al día.');
+  add('info', 'Recarga', n1(horas) + ' h de sol',
+    'Llenar ' + n1(d.kWh) + ' kWh desde vacío con ' + n1(d.kWp)
+    + ' kWp. En Santiago cuenta con 5 horas útiles al día.', 'nada');
 
   const util = d.kWh * dod;
-  add('info', 'Reserva útil', r1(util) + ' kWh',
-    'Al ' + Math.round(dod*100) + ' % de descarga. Da unas ' + r1(util/0.5)
-    + ' h con 500 W, o ' + r1(util/1.5) + ' h con 1,5 kW.');
+  add('info', 'Reserva útil', n1(util) + ' kWh',
+    'Al ' + Math.round(dod*100) + ' % de descarga. Da unas ' + n1(util/0.5)
+    + ' h con 500 W, o ' + n1(util/1.5) + ' h con 1,5 kW.', 'nada');
 
   return { filas, celdas, vAbs, vFlo, vMin, vCel, dod, vOK, limiteCarga };
 }
@@ -320,7 +410,7 @@ export function protecciones(d, inv){
   add('Batería','fusT','Corte de cortocircuito de batería', d.fusT + ' A · ≥ 10 kA en CC',
     'Va pegado al borne positivo. <b>Lo que importa no son los amperios, es el poder de corte en corriente '
     + 'continua</b>: pide <b>≥ 10 kA a ' + Math.ceil(d.Vbat * 1.4 / 10) * 10 + ' V CC</b>. '
-    + 'El Clase T es el de siempre, pero en Cuba no se encuentra: abajo tienes los que sí sirven');
+    + 'Más abajo está qué pieza es, dónde va exactamente y cuál se pone');
   add('Batería','cabBat','Cable de batería', d.cabBat,
     'Dos tramos, positivo y negativo, con terminales de ojal crimpados');
 
@@ -350,42 +440,68 @@ export function protecciones(d, inv){
   return L;
 }
 
-/* ═══════════════ 8 ter · QUÉ PONER SI NO HAY FUSIBLE CLASE T ═══════════════
-   En Cuba el Clase T no se consigue. Lo que hay que buscar no es la marca
-   ni el nombre: es el PODER DE CORTE en corriente continua. Un fusible o
-   breaker de coche o de casa apaga bien 230 V alternos, donde la corriente
-   pasa por cero cien veces por segundo y el arco se apaga solo. En continua
-   la corriente nunca pasa por cero: el arco sigue ardiendo hasta que algo
-   lo corta de verdad. Por eso el número que hay que exigir es en CC. */
+/* ═══════════════ 8 ter · EL CORTE DE CORTOCIRCUITO DE LA BATERÍA ═══════════════
+
+   Qué es y dónde va: es la pieza que se atornilla o se monta <b>a menos de
+   medio metro del borne positivo de la batería</b>, antes que ninguna otra
+   cosa. No protege al inversor: protege <b>el cable</b> que va de la batería
+   al inversor. Si ese cable se pela y toca el chasis, una batería de litio
+   de 48 V puede soltar varios miles de amperios en un instante, y el cable
+   se pone al rojo antes de que nadie llegue a nada.
+
+   Por qué no vale cualquier cosa: en corriente alterna la corriente pasa por
+   cero cien veces por segundo, y el arco que se forma al abrir el contacto se
+   apaga solo en ese cruce. En corriente continua <b>la corriente nunca pasa
+   por cero</b>: el arco sigue ardiendo hasta que algo lo corta de verdad. Por
+   eso el número que hay que exigir no son los amperios, sino el <b>poder de
+   corte en corriente continua</b>, que es cuánta corriente es capaz de
+   apagar sin quedarse soldado ni convertirse en un soplete.
+
+   La lista de abajo no son cinco opciones para elegir: <b>la primera está
+   decidida</b>. Las demás están para que se reconozcan si aparecen delante,
+   y para saber cuáles hay que rechazar. */
 export function sustitutosFusible(d){
   const kA = '≥ 10 kA';
   const V = Math.ceil(d.Vbat * 1.4 / 10) * 10;
   return [
     { n:'Breaker CC de varios polos, cableados en serie', bien:true, elegido:true,
+      donde:'Entre el borne positivo de la batería y el inversor',
       v:d.brkDC + ' A · ' + V + ' V CC · 35 USD',
-      t:'<b>Este es el que se usa. Decidido, no es una opción más.</b> '
-        + 'Los breakers de continua de 3 o 4 polos se cablean con <b>todos los polos en serie dentro del '
-        + 'mismo circuito</b>: cada polo parte el arco y entre todos sí lo apagan. '
-        + 'El de <b>125 A y 3 polos a 35 USD</b> es exactamente eso. '
+      t:'<b>Este es el que se pone. Está decidido, no es una opción más.</b> '
+        + 'Es un interruptor de corriente continua de 3 o 4 polos, y el truco está en cómo '
+        + 'se cablea: <b>todos los polos van en serie dentro del mismo circuito</b>, uno detrás '
+        + 'de otro, no uno por cable. Así cada polo parte el arco en un trozo y entre los tres '
+        + 'lo apagan. El de <b>125 A y 3 polos a 35 USD</b> es exactamente esto. '
         + 'Al pedirlo confirma dos cosas: el <b>poder de corte en corriente continua</b> y que el '
         + 'fabricante admite cablear los polos en serie.' },
     { n:'Fusible MRBF de borne', bien:true,
+      donde:'Atornillado directamente al borne de la batería',
       v:d.fusT + ' A · 10 kA',
-      t:'Se atornilla directo al borne positivo de la batería. Pensado para barcos y para litio, con poder '
-        + 'de corte alto en continua hasta 58 V. Si aparece uno, es el sustituto más limpio del Clase T.' },
-    { n:'Fusible NH (cuchilla industrial) con dato de CC', bien:true,
+      t:'Un fusible con forma de terminal, que se atornilla encima del propio borne positivo. '
+        + 'Está pensado para barcos y para litio, y corta bien en continua hasta 58 V. '
+        + 'Es la pieza más limpia de todas porque no hay ni un centímetro de cable sin proteger, '
+        + 'pero hay que encontrarla.' },
+    { n:'Fusible NH de cuchilla, con su base', bien:true,
+      donde:'En la caja de continua, entre la batería y el inversor',
       v:d.fusT + ' A · ' + kA,
-      t:'Los NH00 o NH1 con su base son comunes en material industrial y cortan muchísimo. '
-        + '<b>Ojo:</b> casi todos vienen con el dato en alterna. Sirve solo si la ficha dice también '
-        + 'el poder de corte <b>en corriente continua</b> a ' + V + ' V.' },
+      t:'El fusible industrial de toda la vida: una cuchilla gruesa que entra en una base de '
+        + 'porcelana. Corta muchísimo y se consigue en material eléctrico industrial. '
+        + '<b>El cuidado está en la ficha:</b> casi todos traen el poder de corte en alterna, que '
+        + 'es mucho mayor. Solo sirve si dice también el número <b>en corriente continua</b> a '
+        + V + ' V.' },
     { n:'Fusible ANL o MEGA', bien:false,
+      donde:'En un portafusibles, cerca de la batería',
       v:d.fusT + ' A · 2–6 kA',
-      t:'Baratos y fáciles de encontrar, pero <b>cortan mucho menos</b>. Valen para un sistema pequeño; '
-        + 'con un banco de litio grande se pueden quedar cortos y abrirse hechos un arco.' },
+      t:'Son los de coche y de equipos de sonido: baratos y fáciles de encontrar. El problema es '
+        + 'que <b>cortan mucho menos</b>. En un sistema chico aguantan; con un banco de litio grande '
+        + 'se pueden quedar cortos, y un fusible que no llega a cortar se abre hecho un arco y '
+        + 'sigue conduciendo.' },
     { n:'Breaker normal de casa', bien:false,
+      donde:'En ningún sitio de este sistema',
       v:'NO', color:'bad',
-      t:'<b>Esto no.</b> Un magnetotérmico de alterna en un circuito de continua no apaga el arco: '
-        + 'lo mantiene. Es de los errores que terminan en incendio.' },
+      t:'<b>Esto no.</b> Un magnetotérmico de alterna puesto en un circuito de continua no apaga '
+        + 'el arco: lo mantiene ardiendo dentro de su propia carcasa de plástico. Es de los '
+        + 'errores que terminan en incendio, y es fácil de cometer porque por fuera son iguales.' },
   ];
 }
 

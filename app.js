@@ -10,7 +10,7 @@ import { MODELOS, BATS, PRECIOS, APARATOS } from './datos.js';
 import { datosCot, htmlCot, empaquetarCot, desempaquetarCot } from './cotizacion.js';
 
 const LS = 'llenergy-v1';
-const VERSION_APP = 'v25';   // sube con cada publicación, junto a la de sw.js
+const VERSION_APP = 'v26';   // sube con cada publicación, junto a la de sw.js
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
@@ -133,9 +133,19 @@ const nota = txt => txt
   ? '<div class="nota"><span class="et">Nota</span><span class="tp">' + txt + '</span></div>'
   : '';
 
+/* La cuenta de dónde sale una cantidad. Va en monoespaciada y debajo del
+   dato, para que se pueda seguir número a número. */
+const cuenta = txt => txt ? '<span class="cuenta">' + txt + '</span>' : '';
+
+/* Una fila de dato. La explicación va como hermana del título, no dentro:
+   cuando el valor de la derecha es largo («130 A pide · 100 A deja») y no puede
+   partirse, si la explicación estuviera dentro del título se quedaba en una
+   columna de una palabra por línea. Así la explicación ocupa siempre el ancho
+   completo por debajo, y el valor se baja solo a su propia línea si no cabe. */
 const fila = (tx, vl, small, clase) =>
-  '<div class="fila"><span class="tx">' + tx + (small ? '<small>' + small + '</small>' : '')
-  + '</span><span class="vl ' + (clase||'') + '">' + vl + '</span></div>';
+  '<div class="fila"><span class="tx">' + tx + '</span>'
+  + '<span class="vl ' + (clase||'') + '">' + vl + '</span>'
+  + (small ? '<span class="nt">' + small + '</span>' : '') + '</div>';
 
 /* ─────────── datos del sistema listos para el motor ─────────── */
 function sistemaDe(t){
@@ -596,8 +606,23 @@ function pintarDiseno(){
 
   /* --- compatibilidad --- */
   const c = M.compatibilidad(d, inv, bat);
+  /* Cada fila dice también QUÉ CUESTA arreglarla, que es lo que de verdad
+     cambia la conversación: un ajuste del menú es gratis; cambiar un equipo
+     es dinero y hay que decidirlo antes de dar un precio. */
+  const porArreglar = c.filas.filter(f => f.arreglo && f.arreglo !== 'nada');
+  const peor = porArreglar.length
+    ? porArreglar.reduce((a, b) => M.ARREGLOS[a.arreglo].ord <= M.ARREGLOS[b.arreglo].ord ? a : b).arreglo
+    : null;
+
   h += caja('¿Se llevan bien la batería y el inversor?',
-    c.filas.map(f => fila('<span class="pt ' + f.estado + '"></span>' + f.tit,
+    (peor
+      ? '<div class="titular ' + (peor === 'equipo' ? 'rojo' : 'info') + '"><b>'
+        + M.ARREGLOS[peor].et + '</b><small>' + M.ARREGLOS[peor].q + '</small></div>'
+      : '<div class="titular"><b>Encajan</b><small>No hay nada que ajustar ni que cambiar: '
+        + 'el inversor y la batería trabajan dentro de sus límites.</small></div>')
+    + c.filas.map(f => fila('<span class="pt ' + f.estado + '"></span>' + f.tit
+      + (f.arreglo && f.arreglo !== 'nada'
+          ? '<span class="arreglo ' + f.arreglo + '">' + M.ARREGLOS[f.arreglo].et + '</span>' : ''),
       f.valor, f.nota, f.estado)).join(''),
     c.vOK
       ? '<b>Ajustes para meterle al inversor</b> (' + c.celdas + ' celdas, ' + co(d.Vbat) + ' V):<br>'
@@ -627,18 +652,28 @@ function pintarDiseno(){
     'Calculado al 125 % de la corriente de trabajo. Si un valor cae entre dos tamaños comerciales, se coge <b>el inmediatamente superior</b>.'
     + (porMirar ? ' · <b>Las marcadas en ámbar</b> son las que algunos inversores traen de fábrica y otros no: míralo en el equipo antes de comprarlas.' : ''));
 
-  /* qué poner si no hay Clase T */
-  h += caja('El corte de la batería, sin Clase T',
-    '<div class="titular info"><b>Busca el poder de corte, no el nombre</b>'
-    + '<small>En corriente continua la corriente nunca pasa por cero, así que el arco no se apaga solo. '
-    + 'Por eso lo que hay que exigir es <b>≥ 10 kA de poder de corte en CC</b> a la tensión de tu batería. '
+  /* El corte de cortocircuito de la batería: qué es, dónde va y qué se pone. */
+  h += caja('El corte de cortocircuito de la batería',
+    '<div class="titular"><b>Qué es esta pieza</b>'
+    + '<small>Va <b>a menos de medio metro del borne positivo de la batería</b>, antes que ninguna '
+    + 'otra cosa. <b>No protege al inversor: protege el cable</b> que va de la batería al inversor. '
+    + 'Si ese cable se pela y toca el chasis, una batería de litio de ' + co(d.Vbat) + ' V suelta '
+    + 'miles de amperios en un instante y el cable se pone al rojo antes de que nadie llegue.</small></div>'
+    + '<div class="titular info"><b>Por qué no vale cualquiera</b>'
+    + '<small>En alterna la corriente pasa por cero cien veces por segundo y el arco se apaga solo en '
+    + 'ese cruce. <b>En continua nunca pasa por cero</b>: el arco sigue ardiendo hasta que algo lo corta '
+    + 'de verdad. Por eso el número que hay que exigir no son los amperios, sino el <b>poder de corte '
+    + 'en corriente continua</b>: <b>≥ 10 kA a ' + Math.ceil(d.Vbat * 1.4 / 10) * 10 + ' V CC</b>. '
     + 'Si la ficha solo da el dato en alterna, <b>no vale</b>.</small></div>'
     + M.sustitutosFusible(d).map(s => fila(
         '<span class="pt ' + (s.bien ? 'ok' : (s.color === 'bad' ? 'bad' : 'warn')) + '"></span>'
-        + s.n + (s.elegido ? ' <span class="elegido">El que usamos</span>' : ''),
+        + s.n + (s.elegido ? ' <span class="elegido">El que se pone</span>' : '')
+        + '<span class="donde">' + s.donde + '</span>',
         s.v, s.t, s.bien ? 'ok' : (s.color === 'bad' ? 'bad' : 'warn'))).join(''),
-    'El BMS de la batería también corta por cortocircuito, y en un equipo bueno corta rápido. '
-    + 'Pero <b>el fusible protege el tramo entre el borne y el BMS</b>, y protege también el día que el '
+    'Lo de arriba no son cinco opciones para elegir: <b>la primera está decidida</b>. Las demás están '
+    + 'para reconocerlas si aparecen delante y para saber cuáles hay que rechazar. '
+    + 'Y sí, el BMS de la batería también corta por cortocircuito, y en un equipo bueno corta rápido: '
+    + 'pero <b>esta pieza protege el tramo entre el borne y el BMS</b>, y protege también el día que el '
     + 'BMS falle. Por eso va igual.');
 
   /* cuánto cuestan estas protecciones en Cuba */
@@ -698,40 +733,58 @@ function pintarDiseno(){
   let mat = '';
   if (cx){
     mat += '<div class="sep">Conexión</div>'
-      + fila('Cable solar rojo', cx.metrosCable + ' m', cx.cabFV + ' · ida y vuelta con margen')
-      + fila('Cable solar negro', cx.metrosCable + ' m', 'Mismo metraje')
-      + fila('Pares de conectores MC4', cx.paresMC4 + ' pares', 'Incluye 2 de repuesto')
+      + fila('Cable solar rojo', cx.metrosCable + ' m',
+          cx.cabFV + ' · baja del panel al inversor y vuelve' + cuenta(cx.cuentas.cable))
+      + fila('Cable solar negro', cx.metrosCable + ' m', 'El mismo metraje que el rojo')
+      + fila('Pares de conectores MC4', cx.paresMC4 + ' pares',
+          'Los que unen panel con panel' + cuenta(cx.cuentas.mc4))
       + fila('Conectores Y de derivación',
           cx.conectorY === 'si' ? '1 par' : (cx.conectorY === 'prohibido' ? 'NO USAR' : 'No hacen falta'),
           cx.conectorY === 'si' ? 'Unen las 2 cadenas en una bajada'
           : cx.conectorY === 'prohibido' ? '<b>Con ' + cx.cadenas + ' cadenas hacen falta fusibles, y los conectores Y los saltan.</b> Únelas dentro de la caja CC'
           : 'Con una sola cadena va directo a la caja',
           cx.conectorY === 'prohibido' ? 'bad' : '')
-      + fila('Prensaestopas', cx.prensa + ' uds.', 'Para que la caja siga estanca')
-      + fila('Tubo corrugado', cx.corrugado + ' m', 'Protege el cable del sol y los roedores')
-      + fila('Bridas resistentes a UV', cx.bridas + ' uds.', 'Negras de exterior; las blancas se parten en un año');
+      + fila('Prensaestopas', cx.prensa + ' uds.',
+          'Para que la caja siga estanca por donde entra el cable' + cuenta(cx.cuentas.prensa))
+      + fila('Tubo corrugado', cx.corrugado + ' m',
+          'Protege el cable del sol y de los roedores' + cuenta(cx.cuentas.corrugado))
+      + fila('Bridas resistentes a UV', cx.bridas + ' uds.',
+          'Negras de exterior; las blancas se parten en un año' + cuenta(cx.cuentas.bridas));
   }
   mat += '<div class="sep">Sujeción</div>'
-    + fila('Presillas intermedias', mo.presMedio + ' uds.', 'Las de forma de <b>T</b>: cada una pisa dos paneles vecinos')
-    + fila('Presillas de extremo', mo.presExtremo + ' uds.', 'Las de forma de <b>L</b>: cierran cada riel. <b>No son intercambiables</b>')
-    + fila('Tornillos T y tuercas', mo.tornillos + ' juegos', 'Uno por presilla')
+    + fila('Presillas intermedias', mo.presMedio + ' uds.',
+        'Las de forma de <b>T</b>: cada una pisa dos paneles vecinos' + cuenta(mo.cuentas.presMedio))
+    + fila('Presillas de extremo', mo.presExtremo + ' uds.',
+        'Las de forma de <b>L</b>: cierran cada riel. <b>No son intercambiables</b>'
+        + cuenta(mo.cuentas.presExtremo))
+    + fila('Tornillos T y tuercas', mo.tornillos + ' juegos',
+        'Uno por presilla' + cuenta(mo.presMedio + ' intermedias + ' + mo.presExtremo
+          + ' de extremo = ' + mo.tornillos + ' juegos'))
     + fila('Perfil o ángulo de acero', mo.metrosPerfil + ' m',
         co(mo.metrosRiel) + ' m de rieles + ' + co(mo.metrosApoyo) + ' m de '
-        + (inc.plano ? 'triángulos a ' + inc.grados + '°' : 'pies de anclaje') + ', con 10 % de margen')
-    + fila('Apoyos al techo', mo.apoyos + ' uds.', 'Uno cada 1,7 m. Cada uno con 2 anclajes')
+        + (inc.plano ? 'triángulos a ' + inc.grados + '°' : 'pies de anclaje')
+        + cuenta(mo.cuentas.riel) + cuenta(mo.cuentas.perfil))
+    + fila('Apoyos al techo', mo.apoyos + ' uds.',
+        'Cada uno con 2 anclajes al techo' + cuenta(mo.cuentas.apoyos))
     + fila('Superficie que ocupa', co(mo.superficie) + ' m²',
         mo.porFila + ' por fila' + (mo.filas>1 ? ' × ' + mo.filas + ' filas' : '') + '. Mídelo antes de prometer nada', 'info');
 
   h += caja('Materiales que hay que llevar',
-    campo('s_dist','Distancia del techo al inversor','En metros', numInp('s_dist', s.dist, 2, 80, 1, 'm'))
-    + campo('s_filas','Número de filas','', numInp('s_filas', s.filas, 1, 8, 1, 'filas'))
+    campo('s_dist','Distancia del techo al inversor',
+        '<b>Este es el único dato que no se calcula: lo mides tú con la cinta.</b> '
+        + 'De él sale todo el metraje de cable y de corrugado, así que si está mal medido, '
+        + 'está mal todo lo que hay debajo',
+        numInp('s_dist', s.dist, 2, 80, 1, 'm'))
+    + campo('s_filas','Número de filas','', numInp('s_filas', s.filas, 1, 8, 1, ''))
     + campo('s_techo','Tipo de techo','Cambia mucho el metraje de perfil', sel('s_techo', s.techo,
         [['plano','Plano (hay que hacer triángulos)'],['incl','Inclinado (rieles pegados)']]))
     + campo('s_orient','Cómo se montan','', sel('s_orient', s.orient, [['v','Vertical'],['h','Horizontal']]))
     + campo('s_plargo','Largo del panel','En metros', numInp('s_plargo', s.plargo, 0.8, 3, 0.01, 'm'))
     + campo('s_pancho','Ancho del panel','En metros', numInp('s_pancho', s.pancho, 0.5, 1.5, 0.01, 'm'))
     + mat,
-    '<b>Los paneles ya vienen con su cable y su MC4 de fábrica:</b> para conectarlos en serie no hace falta nada, se enchufa uno con el siguiente. Las presillas aprietan solo donde el fabricante marca el marco, nunca sobre el cristal.');
+    'Debajo de cada cantidad está <b>la cuenta de la que sale</b>, para poder comprobarla y '
+    + 'corregirla. '
+    + '<b>Los paneles ya vienen con su cable y su MC4 de fábrica:</b> para conectarlos en serie no hace falta nada, se enchufa uno con el siguiente. Las presillas aprietan solo donde el fabricante marca el marco, nunca sobre el cristal.');
 
   /* --- lo que se cobra por el montaje: lo ve también el instalador --- */
   const cobro = num(t.dinero.cobroMontaje);
