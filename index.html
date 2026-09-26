@@ -59,10 +59,13 @@ a{color:var(--verde)}
   border-bottom:1px solid var(--linea2)}
 .top-fila{display:flex; align-items:center; justify-content:space-between; gap:10px}
 .logo{display:flex; align-items:center; gap:9px; min-width:0}
-.logo .sol{width:30px; height:30px; flex-shrink:0}
+.logo .sol{width:36px; height:32px; flex-shrink:0}
+/* El nombre, en blanco a plata como en el logo: es la misma marca, no dos. */
 .logo .n{font-family:"Archivo",sans-serif; font-size:22px; font-weight:800;
-  letter-spacing:-.02em; line-height:1}
-.logo .n span{color:var(--naranja)}
+  letter-spacing:-.03em; line-height:1;
+  background:linear-gradient(115deg, #FFFFFF 0%, #F2F5F8 42%, #C6D0DA 78%, #A7B3BF 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent}
+.logo .n span{color:inherit}
 
 .rol{display:flex; gap:2px; background:var(--panel2); border-radius:10px; padding:3px;
   border:1px solid var(--linea)}
@@ -527,16 +530,59 @@ body.escribiendo .nav{transform:translateY(120%); pointer-events:none}
 <div class="top">
   <div class="top-fila">
     <div class="logo">
-      <svg class="sol" viewBox="0 0 100 100" aria-hidden="true">
-        <defs><clipPath id="llHorizonte"><rect x="0" y="0" width="100" height="62"/></clipPath></defs>
-        <circle cx="50" cy="58" r="21" fill="#FF8A3C" clip-path="url(#llHorizonte)"/>
-        <g stroke="#FF8A3C" stroke-width="4.5" stroke-linecap="round">
-          <path d="M23.4 63.4L15.4 63.4M25.2 47.3L17.9 44.1M35.2 35.4L30.8 28.8M50 31L50 23M64.8 35.4L69.2 28.8M74.8 47.3L82.1 44.1M76.6 63.4L84.6 63.4"/>
+      <!-- El mismo sol del logo de la aplicacion: circulo cortado por las
+           hojas, siete rayos a 30 grados y los tres tonos de verde. -->
+      <svg class="sol" viewBox="176 130 672 600" aria-hidden="true">
+        <defs>
+          <linearGradient id="hSol" gradientUnits="userSpaceOnUse" x1="340" y1="512" x2="702" y2="424">
+            <stop offset="0" stop-color="#EA5A06"/><stop offset="0.20" stop-color="#F2740C"/>
+            <stop offset="0.44" stop-color="#F9920F"/><stop offset="0.68" stop-color="#FDB61C"/>
+            <stop offset="0.88" stop-color="#FFD63F"/><stop offset="1" stop-color="#FFF0A0"/>
+          </linearGradient>
+          <radialGradient id="hRef" gradientUnits="userSpaceOnUse" cx="668" cy="424" r="152">
+            <stop offset="0" stop-color="#FFF8C4" stop-opacity="0.95"/>
+            <stop offset="0.4" stop-color="#FFE066" stop-opacity="0.55"/>
+            <stop offset="1" stop-color="#FFD24A" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="hRayo" gradientUnits="userSpaceOnUse" x1="512" y1="500" x2="512" y2="130">
+            <stop offset="0" stop-color="#F8880F"/><stop offset="0.45" stop-color="#FDA91B"/>
+            <stop offset="1" stop-color="#FFD960"/>
+          </linearGradient>
+          <linearGradient id="hV3" gradientUnits="userSpaceOnUse" x1="336" y1="682" x2="808" y2="562">
+            <stop offset="0" stop-color="#0B7C6E"/><stop offset="0.38" stop-color="#0F9A6B"/>
+            <stop offset="0.72" stop-color="#22BE60"/><stop offset="1" stop-color="#57D96B"/>
+          </linearGradient>
+          <linearGradient id="hV2" gradientUnits="userSpaceOnUse" x1="242" y1="600" x2="832" y2="468">
+            <stop offset="0" stop-color="#12A183"/><stop offset="0.26" stop-color="#18BA73"/>
+            <stop offset="0.55" stop-color="#34CC63"/><stop offset="0.80" stop-color="#83E278"/>
+            <stop offset="1" stop-color="#F4FEDC"/>
+          </linearGradient>
+          <linearGradient id="hV1" gradientUnits="userSpaceOnUse" x1="472" y1="546" x2="832" y2="468">
+            <stop offset="0" stop-color="#3FD07A" stop-opacity="0"/>
+            <stop offset="0.35" stop-color="#7BE38A" stop-opacity="0.55"/>
+            <stop offset="0.78" stop-color="#CBF5B0" stop-opacity="0.85"/>
+            <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.95"/>
+          </linearGradient>
+          <filter id="hSombra" x="-25%" y="-45%" width="150%" height="200%">
+            <feDropShadow dx="-2" dy="-12" stdDeviation="6" flood-color="#04070C" flood-opacity="0.92"/>
+            <feDropShadow dx="0" dy="13" stdDeviation="6" flood-color="#04070C" flood-opacity="0.80"/>
+          </filter>
+        </defs>
+        <g stroke="url(#hRayo)" stroke-width="27" stroke-linecap="round">
+          <line x1="722" y1="452" x2="808" y2="452"/><line x1="694" y1="347" x2="769" y2="304"/>
+          <line x1="617" y1="270" x2="660" y2="196"/><line x1="513" y1="242" x2="513" y2="156"/>
+          <line x1="409" y1="270" x2="366" y2="196"/><line x1="332" y1="347" x2="257" y2="304"/>
+          <line x1="304" y1="452" x2="218" y2="452"/>
         </g>
-        <rect x="12" y="70" width="76" height="7" rx="3.5" fill="#2FD97F"/>
-        <rect x="26" y="83" width="48" height="7" rx="3.5" fill="#2FD97F" opacity=".5"/>
+        <circle cx="513" cy="448" r="180" fill="url(#hSol)"/>
+        <circle cx="513" cy="448" r="180" fill="url(#hRef)"/>
+        <path d="M 336,646 C 466,594 642,560 808,572 C 722,672 476,704 336,646 Z" fill="url(#hV3)"/>
+        <g filter="url(#hSombra)">
+          <path d="M 240,578 C 394,500 606,452 832,468 C 738,606 452,716 240,578 Z" fill="url(#hV2)"/>
+        </g>
+        <path d="M 478,536 C 598,490 718,466 832,468 C 758,514 624,552 478,536 Z" fill="url(#hV1)"/>
       </svg>
-      <div class="n">LL<span>Energy</span></div>
+      <div class="n">L.L.<span>Energy</span></div>
     </div>
     <div class="rol" role="group" aria-label="Modo">
       <button type="button" id="rolCampo" aria-pressed="false">Campo</button>
