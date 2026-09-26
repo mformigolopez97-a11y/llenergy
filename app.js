@@ -10,8 +10,16 @@ import { MODELOS, BATS, PRECIOS, APARATOS, CAMPOS_INV, CAMPOS_BAT } from './dato
 import { datosCot, htmlCot, empaquetarCot, desempaquetarCot } from './cotizacion.js';
 
 const LS = 'llenergy-v1';
-const VERSION_APP = 'v29';   // sube con cada publicación, junto a la de sw.js
+const VERSION_APP = 'v30';   // sube con cada publicación, junto a la de sw.js
 const $ = id => document.getElementById(id);
+
+/* Solo <main> se desplaza; la ventana ya no. Subir al principio se hace
+   sobre el, no sobre window, o no sube nada. */
+const arriba = () => { const m = document.querySelector('main'); if (m) m.scrollTop = 0;
+  window.scrollTo(0, 0); };
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio',
+  'agosto','septiembre','octubre','noviembre','diciembre'];
+
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
 const co  = x => String(x).replace('.', ',');
@@ -235,6 +243,35 @@ function pintarPanel(){
   return h + h2;
 }
 
+/* Las cinco fases por las que pasa un trabajo, en orden, con lo que toca
+   hacer en cada una. Sirve para la tira de progreso y para decidir que se
+   ensena en cada pantalla: Marcos pidio que cada estado abra lo suyo y no
+   todo a la vez. */
+const FASES = [
+  { k:'agendar',  n:'Por visitar', q:'Poner día, hora y dirección, y mandárselo al técnico' },
+  { k:'visita',   n:'Visitada',    q:'Levantar la casa: aparatos, techo, neutro y riesgos' },
+  { k:'cotizado', n:'Cotizado',    q:'Elegir equipos, cerrar el precio y mandar la cotización' },
+  { k:'aceptado', n:'Aceptado',    q:'Comprar, llevar el material y montar' },
+  { k:'montado',  n:'Montado',     q:'Prueba de banco, garantía y mantenimiento' },
+];
+const faseDe = e => Math.max(0, FASES.findIndex(f => f.k === e));
+
+/* La tira de progreso del trabajo abierto: donde esta y que toca ahora. */
+function tiraFases(t){
+  const i = faseDe(t.estado);
+  return caja('En qué punto va este trabajo',
+    '<div class="tira">'
+    + FASES.map((f, j) => '<div class="fase' + (j < i ? ' hecha' : (j === i ? ' ahora' : ''))
+        + '"><span class="pun"></span><span class="et">' + f.n + '</span></div>').join('')
+    + '</div>'
+    + '<div class="titular ' + (i === 4 ? '' : 'ahora') + '" style="margin-top:14px"><b>'
+    + FASES[i].n + '</b><small>' + FASES[i].q + '.'
+    + (i < 4 ? ' Cuando esté hecho, pasa el trabajo a <b>' + FASES[i+1].n
+        + '</b> aquí abajo.' : ' Es la última fase.') + '</small></div>',
+    'Cada fase abre lo suyo en las demás pantallas. Si cambias de trabajo arriba, '
+    + 'todo lo que veas en Visita, Diseño y Dinero pasa a ser <b>de ese trabajo</b>.');
+}
+
 function pintarTrabajos(){
   const ETIQ = { agendar:'Por visitar', visita:'Visita', cotizado:'Cotizado',
     aceptado:'Aceptado', montado:'Montado' };
@@ -279,6 +316,8 @@ function pintarTrabajos(){
     + '<b>No lleva ni tus costes, ni tu margen, ni el reparto.</b> Se lo mandas por WhatsApp y al abrirlo '
     + 'se le guarda en su teléfono, listo para usar sin internet.');
 
+  if ((t.tipo || 'montaje') !== 'venta') h += tiraFases(t);
+
   $('p-trabajos').innerHTML = h;
 }
 
@@ -287,9 +326,29 @@ function pintarVisita(){
   const t = activo(), v = t.visita;
   const porVisitar = t.estado === 'agendar';
 
-  /* La cita va primero y se queda arriba. El técnico abre esto en la calle
-     y lo primero que necesita es saber a qué casa va y a qué hora. */
-  let h = caja('Agendar la visita',
+  /* La cita solo se ensena mientras la visita esta POR HACER. En cuanto esta
+     hecha no pinta nada pedir dia y hora otra vez: se queda una linea con lo
+     que paso y ya. Es lo que pidio Marcos, y tiene razon: una pantalla llena
+     de campos que ya no se van a tocar solo estorba para encontrar lo que si. */
+  let h = '';
+  if (!porVisitar){
+    const cuando = (v.cita || '').trim();
+    const fecha = cuando ? new Date(cuando) : null;
+    const dicho = fecha && !isNaN(fecha)
+      ? fecha.getDate() + ' de ' + MESES[fecha.getMonth()]
+        + ', ' + String(fecha.getHours()).padStart(2,'0') + ':'
+        + String(fecha.getMinutes()).padStart(2,'0')
+      : 'sin fecha apuntada';
+    h += caja('La visita ya está hecha',
+      fila('Cuándo se fue', dicho, (v.quienVa || '').trim() ? 'Fue ' + esc(v.quienVa) : '', 'ok')
+      + ((v.direccion || '').trim()
+          ? fila('Dónde', '—', esc(v.direccion).split(String.fromCharCode(10)).join(' · ')) : '')
+      + '<button type="button" class="btn ghost" id="btnVolverAgendar" style="margin-top:12px">'
+      + 'Cambiar la fecha o volver a agendar</button>',
+      'Lo de abajo es lo que se levantó en la casa. Si hay que volver a visitar, '
+      + 'pulsa el botón y el trabajo vuelve a <b>Por visitar</b>.');
+  }
+  if (porVisitar) h += caja('Agendar la visita',
     (porVisitar && !(v.cita || '').trim()
       ? '<div class="titular rojo"><b>Esta visita no tiene fecha</b><small>'
         + 'Sin fecha y sin dirección el técnico no sabe a qué casa ir. '
@@ -679,6 +738,33 @@ function pintarDiseno(){
 
   h += bloqueConfirmar(s.modeloInv, inv, CAMPOS_INV, 'del inversor');
   h += bloqueConfirmar(s.modeloBat, bat, CAMPOS_BAT, 'de la batería');
+
+  /* Sin inversor y sin batería no hay nada que calcular. Antes salía todo el
+     resto de la pantalla con números sacados de valores por defecto, que es
+     peor que no enseñar nada: parecen cálculos de verdad y no lo son. */
+  if (!s.modeloInv || !s.modeloBat){
+    const falta = !s.modeloInv && !s.modeloBat ? 'el inversor y la batería'
+      : (!s.modeloInv ? 'el inversor' : 'la batería');
+    h += caja('Lo que falta para poder calcular',
+      '<div class="titular info"><b>Elige ' + falta + '</b><small>'
+      + 'Hasta que no estén elegidos los dos, aquí abajo no sale nada, y es a propósito: '
+      + 'los números del sistema, los paneles en serie, las protecciones y los materiales '
+      + '<b>dependen del equipo concreto</b>. Enseñarlos con valores por defecto sería peor '
+      + 'que no enseñarlos, porque parecen cálculos de verdad y no lo son.</small></div>'
+      + '<div class="pasos">'
+      + '<div class="paso' + (s.modeloInv ? ' listo' : '') + '"><span class="pt '
+      + (s.modeloInv ? 'ok' : 'warn') + '"></span>Inversor'
+      + (s.modeloInv ? '<b>' + esc(inv.n.split(' · ')[0]) + '</b>' : '<b>sin elegir</b>') + '</div>'
+      + '<div class="paso' + (s.modeloBat ? ' listo' : '') + '"><span class="pt '
+      + (s.modeloBat ? 'ok' : 'warn') + '"></span>Batería'
+      + (s.modeloBat ? '<b>' + esc(bat.n.split(' · ')[0]) + '</b>' : '<b>sin elegir</b>') + '</div>'
+      + '</div>',
+      'Si aún no sabes qué equipo va a llevar la casa, cuenta los aparatos en la pantalla de '
+      + '<b>Visita</b>: de ahí sale la potencia y los kWh que hacen falta, y con eso ya sabes '
+      + 'qué buscar.');
+    $('p-diseno').innerHTML = h;
+    return;
+  }
 
   h += caja('Números del sistema',
     campo('s_pinv','Potencia del inversor','En kW', numInp('s_pinv', s.pinv, 1, 30, 0.1, 'kW'))
@@ -1526,7 +1612,7 @@ function irA(destino){
     $('pantFalta').dataset.destino = destino;
     return;
   }
-  pantalla = destino; window.scrollTo(0,0); pintar();
+  pantalla = destino; pintar(); arriba();
 }
 
 document.querySelectorAll('.nav button').forEach(b =>
@@ -1536,7 +1622,7 @@ $('faltaVolver').addEventListener('click', () => { $('pantFalta').hidden = true;
 $('faltaSeguir').addEventListener('click', () => {
   const d = $('pantFalta').dataset.destino;
   $('pantFalta').hidden = true;
-  pantalla = d; window.scrollTo(0,0); pintar();
+  pantalla = d; pintar(); arriba();
 });
 $('pantFalta').addEventListener('click', ev => {
   if (ev.target.id === 'pantFalta') $('pantFalta').hidden = true;
@@ -1557,7 +1643,7 @@ $('rolOficina').addEventListener('click', () => {
   if (!abierto) return pedirClave('entrar');
   S.rol = 'oficina'; pintar();
 });
-$('btnCambiar').addEventListener('click', () => { pantalla = 'trabajos'; window.scrollTo(0,0); pintar(); });
+$('btnCambiar').addEventListener('click', () => { pantalla = 'trabajos'; pintar(); arriba(); });
 
 /* un solo oyente para todo: los campos se llaman igual que el dato que guardan */
 document.addEventListener('input', ev => {
@@ -1668,7 +1754,10 @@ function repinta(){
 document.addEventListener('click', ev => {
   const ir = ev.target.closest('[data-ir]');
   if (ir){ S.activo = ir.dataset.ir; avisado = {}; pintar(); return; }
-  if (ev.target.id === 'btnNuevo'){ nuevoTrabajo(); pintar(); window.scrollTo(0,0); return; }
+  if (ev.target.id === 'btnNuevo'){ nuevoTrabajo(); pintar(); arriba(); return; }
+  if (ev.target.id === 'btnVolverAgendar'){
+    const t = activo(); t.estado = 'agendar'; guardar(); pintar(); arriba(); return;
+  }
   const abrirC = ev.target.closest('[data-abrirconf]');
   if (abrirC){ S.abrirConf = abrirC.dataset.abrirconf; guardar(); repinta(); return; }
 
@@ -1694,7 +1783,7 @@ document.addEventListener('click', ev => {
     t.visita.pide = k.todo.k.kwInv + ' kW · '
       + String(k.todo.k.kWhBat).replace('.', ',') + ' kWh · ' + k.todo.k.npan + ' paneles';
     guardar();
-    pantalla = 'diseno'; window.scrollTo(0, 0); pintar();
+    pantalla = 'diseno'; pintar(); arriba();
     return;
   }
   if (ev.target.id === 'btnActualizar'){

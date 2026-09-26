@@ -43,10 +43,13 @@
   --r:14px; --nav:66px;
 }
 *{box-sizing:border-box}
-html{background:var(--negro)}
+html{background:var(--negro); height:100%}
 body{background:var(--negro); color:var(--blanco);
   font-family:"IBM Plex Sans",system-ui,sans-serif; font-size:16px; line-height:1.5;
-  -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent}
+  -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
+  margin:0; height:100dvh; min-height:100dvh; overflow:hidden;
+  display:flex; flex-direction:column}
+@supports not (height:100dvh){ body{height:100vh; min-height:100vh} }
 h1,h2,h3{font-family:"Archivo",system-ui,sans-serif; margin:0; text-wrap:balance}
 .mono{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums}
 button{font:inherit; cursor:pointer; color:inherit}
@@ -54,7 +57,7 @@ a{color:var(--verde)}
 ::selection{background:var(--verde); color:var(--negro)}
 
 /* ── cabecera ── */
-.top{position:sticky; top:0; z-index:40; background:var(--negro);
+.top{flex:0 0 auto; z-index:40; background:var(--negro);
   padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
   border-bottom:1px solid var(--linea2)}
 .top-fila{display:flex; align-items:center; justify-content:space-between; gap:10px}
@@ -87,7 +90,9 @@ a{color:var(--verde)}
   border-radius:8px; padding:6px 12px; font-size:12.5px; font-weight:600}
 
 /* ── contenido ── */
-main{padding:16px 16px calc(var(--nav) + env(safe-area-inset-bottom) + 26px);
+main{flex:1 1 auto; overflow-y:auto; overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  padding:16px 16px calc(env(safe-area-inset-bottom) + 26px);
   max-width:980px; margin:0 auto}
 .pant{display:none}
 .pant.on{display:block}
@@ -130,6 +135,35 @@ details.grupo > summary > span.si{color:var(--naranja)}
 .ap.hay > label{color:var(--blanco)}
 .ap.hay > input{border-color:rgba(255,138,60,.45); color:var(--naranja);
   background:var(--naranja-s)}
+
+/* ─── La tira de fases: donde va el trabajo ─── */
+.tira{display:flex; align-items:flex-start; gap:0; margin:2px 0 0}
+.fase{flex:1; min-width:0; display:flex; flex-direction:column; align-items:center;
+  gap:7px; position:relative}
+.fase::after{content:""; position:absolute; top:6px; left:50%; width:100%; height:2px;
+  background:var(--linea); z-index:0}
+.fase:last-child::after{display:none}
+.fase.hecha::after{background:var(--verde)}
+.fase .pun{width:14px; height:14px; border-radius:50%; background:var(--panel2);
+  border:2px solid var(--linea); position:relative; z-index:1}
+.fase.hecha .pun{background:var(--verde); border-color:var(--verde)}
+.fase.ahora .pun{background:var(--naranja); border-color:var(--naranja);
+  box-shadow:0 0 0 4px var(--naranja-s)}
+.fase .et{font-family:"IBM Plex Mono",monospace; font-size:8.5px; font-weight:700;
+  letter-spacing:.04em; text-transform:uppercase; color:var(--gris2);
+  text-align:center; line-height:1.3}
+.fase.hecha .et{color:var(--gris)}
+.fase.ahora .et{color:var(--naranja)}
+
+/* ─── Lo que falta para poder calcular ─── */
+.pasos{display:flex; flex-direction:column; gap:2px; margin-top:4px}
+.paso{display:flex; align-items:center; gap:9px; padding:11px 0;
+  border-top:1px solid var(--linea2); font-size:14.5px; color:var(--gris)}
+.paso:first-child{border-top:none}
+.paso b{margin-left:auto; font-family:"IBM Plex Mono",monospace; font-size:12px;
+  font-weight:700; color:var(--ambar); text-align:right}
+.paso.listo{color:var(--blanco)}
+.paso.listo b{color:var(--verde)}
 
 /* ─── Prueba de banco: la lista que se recorre antes de irse ─── */
 .chk{display:flex; gap:12px; align-items:flex-start; padding:12px 0 13px;
@@ -327,6 +361,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .titular.rojo > b{color:var(--rojo)}
 .cuerpo > .titular:only-child{margin-bottom:-12px; border-bottom:none; padding-bottom:16px}
 .titular.info{background:linear-gradient(180deg, var(--menta-s), transparent)}
+.titular.ahora{background:linear-gradient(180deg, var(--naranja-s), transparent)}
+.titular.ahora > b{color:var(--naranja)}
 .titular.info > b{color:var(--menta)}
 
 /* ── trabajos ── */
@@ -335,10 +371,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   padding:14px 15px; margin-bottom:9px}
 .trab:hover{border-color:var(--gris2)}
 .trab[aria-current="true"]{border-color:var(--verde); background:var(--verde-s)}
-.trab .d{flex:1; min-width:0}
-.trab .nm{font-weight:600; font-size:16.5px; font-family:"Archivo",sans-serif}
-.trab .zn{font-size:12.5px; color:var(--gris); margin-top:3px;
-  font-family:"IBM Plex Mono",monospace}
+.trab{flex-wrap:wrap}
+.trab .d{flex:1 1 60%; min-width:0}
+.trab .nm{display:block; font-weight:600; font-size:16.5px;
+  font-family:"Archivo",sans-serif; line-height:1.25}
+.trab .zn{display:block; font-size:12px; color:var(--gris); margin-top:5px;
+  font-family:"IBM Plex Mono",monospace; line-height:1.45}
+.trab .estado{flex:0 0 auto; margin-left:auto; align-self:flex-start}
 .estado{font-family:"IBM Plex Mono",monospace; font-size:9px; font-weight:700;
   letter-spacing:.09em; text-transform:uppercase; padding:5px 9px; border-radius:6px;
   white-space:nowrap; border:1px solid}
@@ -494,8 +533,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 }
 
 /* ── navegación inferior ── */
-.nav{position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex;
-  background:rgba(10,11,13,.94); backdrop-filter:blur(12px);
+.nav{flex:0 0 auto; z-index:50; display:flex;
+  background:var(--negro);
   border-top:1px solid var(--linea); padding-bottom:env(safe-area-inset-bottom)}
 .nav button{flex:1; border:none; background:transparent; color:var(--gris2);
   padding:10px 2px 11px; display:flex; flex-direction:column; align-items:center; gap:4px;
@@ -507,12 +546,14 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   left:50%; transform:translateX(-50%); width:30px; height:2px;
   background:var(--verde); border-radius:0 0 3px 3px}
 .nav button[hidden]{display:none}
-/* con el teclado abierto la barra estorba: se quita de en medio */
-body.escribiendo .nav{transform:translateY(120%); pointer-events:none}
-.nav{transition:transform .15s ease-out}
-@media (prefers-reduced-motion:reduce){ .nav{transition:none} }
+/* Ya no hace falta apartar la barra cuando sale el teclado: al estar dentro
+   de la columna, el teclado encoge el contenido y la barra se queda donde
+   esta, visible y quieta. */
 
 @media (min-width:780px){
+  body{display:block; height:auto; min-height:100dvh; overflow:visible}
+  .top{position:sticky; top:0}
+  main{overflow:visible}
   .campo{grid-template-columns:1fr 180px}
   main{padding-bottom:30px}
   .nav{position:sticky; top:0; bottom:auto; border-top:none;
@@ -598,6 +639,16 @@ body.escribiendo .nav{transform:translateY(120%); pointer-events:none}
   </div>
 </div>
 
+
+
+<main>
+  <div class="pant on" id="p-trabajos"></div>
+  <div class="pant" id="p-visita"></div>
+  <div class="pant" id="p-diseno"></div>
+  <div class="pant" id="p-dinero"></div>
+  <div class="pant" id="p-ajustes"></div>
+</main>
+
 <nav class="nav" aria-label="Secciones">
   <button type="button" data-p="trabajos" aria-current="page">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h12"/></svg>Trabajos</button>
@@ -610,14 +661,6 @@ body.escribiendo .nav{transform:translateY(120%); pointer-events:none}
   <button type="button" data-p="ajustes">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Ajustes</button>
 </nav>
-
-<main>
-  <div class="pant on" id="p-trabajos"></div>
-  <div class="pant" id="p-visita"></div>
-  <div class="pant" id="p-diseno"></div>
-  <div class="pant" id="p-dinero"></div>
-  <div class="pant" id="p-ajustes"></div>
-</main>
 
 <div class="hojaCot" id="hojaCot" hidden>
   <div class="barraCot">
